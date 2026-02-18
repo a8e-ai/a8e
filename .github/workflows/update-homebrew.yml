@@ -1,0 +1,57 @@
+name: Update Homebrew Tap
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-tap:
+    if: "!contains(github.event.release.tag_name, 'canary')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Download release artifacts and compute SHA256
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BASE_URL="https://github.com/a8e-ai/a8e/releases/download/v${VERSION}"
+
+          for target in aarch64-apple-darwin x86_64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu; do
+            FILE="a8e-${target}.tar.bz2"
+            curl -sLf "${BASE_URL}/${FILE}" -o "${FILE}"
+            SHA=$(sha256sum "${FILE}" | cut -d' ' -f1)
+            # Convert target to env var name
+            VARNAME=$(echo "SHA256_${target}" | tr '-' '_' | tr '[:lower:]' '[:upper:]')
+            echo "${VARNAME}=${SHA}" >> $GITHUB_ENV
+            echo "${VARNAME}=${SHA}"
+            rm "${FILE}"
+          done
+
+      - name: Generate formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          sed \
+            -e "s/\${VERSION}/${VERSION}/g" \
+            -e "s/\${SHA256_MACOS_ARM64}/${SHA256_AARCH64_APPLE_DARWIN}/g" \
+            -e "s/\${SHA256_MACOS_X86_64}/${SHA256_X86_64_APPLE_DARWIN}/g" \
+            -e "s/\${SHA256_LINUX_ARM64}/${SHA256_AARCH64_UNKNOWN_LINUX_GNU}/g" \
+            -e "s/\${SHA256_LINUX_X86_64}/${SHA256_X86_64_UNKNOWN_LINUX_GNU}/g" \
+            packaging/homebrew/a8e.rb > /tmp/a8e.rb
+          cat /tmp/a8e.rb
+
+      - name: Push to homebrew-tap repo
+        uses: dmnemec/copy_file_to_another_repo_action@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.TAP_GITHUB_TOKEN }}
+        with:
+          source_file: /tmp/a8e.rb
+          destination_repo: a8e-ai/homebrew-tap
+          destination_folder: Formula
+          destination_branch: main
+          user_email: dev@a8e.ai
+          user_name: a8e-bot
+          commit_message: "Update a8e to ${{ steps.version.outputs.version }}"

@@ -1,12 +1,3 @@
-# This is a **reuseable** workflow that builds the CLI for multiple platforms.
-# It doesn't get triggered on its own. It gets used in multiple workflows:
-#  - release.yml
-#  - canary.yml
-#
-# Platform Build Strategy:
-#  - Linux: Uses Ubuntu runner with cross-compilation
-#  - macOS: Uses macOS runner with cross-compilation
-#  - Windows: Uses Windows runner with native MSVC build
 on:
   workflow_call:
     inputs:
@@ -19,41 +10,36 @@ on:
         required: false
         default: ""
 
-name: "Reusable workflow to build CLI"
+name: "Build CLI"
 
 jobs:
   build-cli:
-    name: Build CLI
+    name: Build CLI (${{ matrix.architecture }}-${{ matrix.target-suffix }})
     runs-on: ${{ matrix.build-on }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Linux builds
-          - os: ubuntu-latest
+          - os: linux
             architecture: x86_64
             target-suffix: unknown-linux-gnu
             build-on: ubuntu-latest
             use-cross: true
-            cc: gcc-10
-          - os: ubuntu-latest
+          - os: linux
             architecture: aarch64
             target-suffix: unknown-linux-gnu
             build-on: ubuntu-latest
             use-cross: true
-            cc: gcc-10
-          # macOS builds
-          - os: macos-latest
+          - os: macos
             architecture: x86_64
             target-suffix: apple-darwin
             build-on: macos-latest
-            use-cross: true
-          - os: macos-latest
+            use-cross: false
+          - os: macos
             architecture: aarch64
             target-suffix: apple-darwin
             build-on: macos-latest
-            use-cross: true
-          # Windows builds (only x86_64 supported)
+            use-cross: false
           - os: windows
             architecture: x86_64
             target-suffix: pc-windows-msvc
@@ -62,9 +48,14 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
 
       - name: Update version in Cargo.toml
         if: ${{ inputs.version != '' }}
@@ -73,98 +64,56 @@ jobs:
           sed -i.bak 's/^version = ".*"/version = "'${{ inputs.version }}'"/' Cargo.toml
           rm -f Cargo.toml.bak
 
-      - name: Install cross
+      - name: Install cross (Linux)
         if: matrix.use-cross
-        run: source ./bin/activate-hermit && cargo install cross --git https://github.com/cross-rs/cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
 
-      - name: Cache Cargo artifacts (Linux/macOS)
-        if: matrix.use-cross
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5  # v2.8.2
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.architecture }}-${{ matrix.target-suffix }}
 
-      - name: Cache Cargo artifacts (Windows)
-        if: matrix.os == 'windows'
-        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5  # v2.8.2
-        with:
-          key: windows-msvc-cli
-
-      - name: Build CLI (Linux/macOS)
-        if: matrix.use-cross
-        env:
-          CROSS_NO_WARNINGS: 0
-          RUST_LOG: debug
-          RUST_BACKTRACE: 1
-          CROSS_VERBOSE: 1
-        run: |
-          source ./bin/activate-hermit
-          export TARGET="${{ matrix.architecture }}-${{ matrix.target-suffix }}"
-          rustup target add "${TARGET}"
-          echo "Building for target: ${TARGET}"
-          echo "Rust toolchain info:"
-          rustup show
-          echo "Cross version:"
-          cross --version
-
-          export CC="${{ matrix.cc || ''}}"
-          cross build --release --target ${TARGET} -p goose-cli
-
-      - name: Setup Rust (Windows)
-        if: matrix.os == 'windows'
+      - name: Add target
         shell: bash
-        run: |
-          rustup show
-          rustup target add x86_64-pc-windows-msvc
+        run: rustup target add ${{ matrix.architecture }}-${{ matrix.target-suffix }}
 
-      - name: Build CLI (Windows)
-        if: matrix.os == 'windows'
-        shell: bash
-        run: |
-          echo "🚀 Building Windows CLI executable..."
-          cargo build --release --target x86_64-pc-windows-msvc -p goose-cli
-
-          if [ ! -f "./target/x86_64-pc-windows-msvc/release/goose.exe" ]; then
-            echo "❌ Windows CLI binary not found."
-            ls -la ./target/x86_64-pc-windows-msvc/release/ || echo "Release directory doesn't exist"
-            exit 1
-          fi
-
-          echo "✅ Windows CLI binary found!"
-          ls -la ./target/x86_64-pc-windows-msvc/release/goose.exe
-
-      - name: Package CLI (Linux/macOS)
+      - name: Build CLI (cross)
         if: matrix.use-cross
         run: |
-          source ./bin/activate-hermit
           export TARGET="${{ matrix.architecture }}-${{ matrix.target-suffix }}"
+          cross build --release --target ${TARGET} -p a8e
 
-          # Create a directory for the package contents
-          mkdir -p "target/${TARGET}/release/goose-package"
+      - name: Build CLI (native)
+        if: ${{ !matrix.use-cross }}
+        shell: bash
+        run: |
+          export TARGET="${{ matrix.architecture }}-${{ matrix.target-suffix }}"
+          cargo build --release --target ${TARGET} -p a8e
 
-          # Copy the goose binary
-          cp "target/${TARGET}/release/goose" "target/${TARGET}/release/goose-package/"
-
-          # Create the tar archive
+      - name: Package CLI (Unix)
+        if: matrix.os != 'windows'
+        shell: bash
+        run: |
+          export TARGET="${{ matrix.architecture }}-${{ matrix.target-suffix }}"
+          mkdir -p "target/${TARGET}/release/a8e-package"
+          cp "target/${TARGET}/release/a8e" "target/${TARGET}/release/a8e-package/"
           cd "target/${TARGET}/release"
-          tar -cjf "goose-${TARGET}.tar.bz2" -C goose-package .
-          echo "ARTIFACT=target/${TARGET}/release/goose-${TARGET}.tar.bz2" >> $GITHUB_ENV
+          tar -cjf "a8e-${TARGET}.tar.bz2" -C a8e-package .
+          echo "ARTIFACT=target/${TARGET}/release/a8e-${TARGET}.tar.bz2" >> $GITHUB_ENV
 
       - name: Package CLI (Windows)
         if: matrix.os == 'windows'
         shell: bash
         run: |
           export TARGET="${{ matrix.architecture }}-${{ matrix.target-suffix }}"
-
-          mkdir -p "target/${TARGET}/release/goose-package"
-
-          cp "target/${TARGET}/release/goose.exe" "target/${TARGET}/release/goose-package/"
-
+          mkdir -p "target/${TARGET}/release/a8e-package"
+          cp "target/${TARGET}/release/a8e.exe" "target/${TARGET}/release/a8e-package/"
           cd "target/${TARGET}/release"
-          7z a -tzip "goose-${TARGET}.zip" goose-package/
-          echo "ARTIFACT=target/${TARGET}/release/goose-${TARGET}.zip" >> $GITHUB_ENV
+          7z a -tzip "a8e-${TARGET}.zip" a8e-package/
+          echo "ARTIFACT=target/${TARGET}/release/a8e-${TARGET}.zip" >> $GITHUB_ENV
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        uses: actions/upload-artifact@v4
         with:
-          name: goose-${{ matrix.architecture }}-${{ matrix.target-suffix }}
+          name: a8e-${{ matrix.architecture }}-${{ matrix.target-suffix }}
           path: ${{ env.ARTIFACT }}
