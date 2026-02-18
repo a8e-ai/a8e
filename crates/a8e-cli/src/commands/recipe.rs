@@ -1,6 +1,6 @@
+use a8e_core::recipe::validate_recipe::validate_recipe_template_from_file;
 use anyhow::Result;
 use console::style;
-use a8e_core::recipe::validate_recipe::validate_recipe_template_from_file;
 use std::collections::HashMap;
 
 use crate::recipes::github_recipe::RecipeSource;

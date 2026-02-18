@@ -197,11 +197,7 @@ mod tests {
         let project_root = temp_dir.path();
 
         fs::create_dir(project_root.join(".git")).unwrap();
-        fs::write(
-            project_root.join(A8E_HINTS_FILENAME),
-            "Root hints content",
-        )
-        .unwrap();
+        fs::write(project_root.join(A8E_HINTS_FILENAME), "Root hints content").unwrap();
 
         let subdir = project_root.join("subdir");
         fs::create_dir(&subdir).unwrap();
@@ -215,11 +211,7 @@ mod tests {
         .unwrap();
 
         let gitignore = create_dummy_gitignore();
-        let hints = load_hint_files(
-            &current_dir,
-            &[A8E_HINTS_FILENAME.to_string()],
-            &gitignore,
-        );
+        let hints = load_hint_files(&current_dir, &[A8E_HINTS_FILENAME.to_string()], &gitignore);
 
         assert!(
             hints.contains("Root hints content\nSubdir hints content\ncurrent_dir hints content")
@@ -246,11 +238,7 @@ mod tests {
         .unwrap();
 
         let gitignore = create_dummy_gitignore();
-        let hints = load_hint_files(
-            &current_dir,
-            &[A8E_HINTS_FILENAME.to_string()],
-            &gitignore,
-        );
+        let hints = load_hint_files(&current_dir, &[A8E_HINTS_FILENAME.to_string()], &gitignore);
 
         // Without .git, should only find hints in current directory
         assert!(hints.contains("Current dir hints content"));
@@ -268,11 +256,7 @@ mod tests {
 
         let subdir = project_root.join("subdir");
         fs::create_dir(&subdir).unwrap();
-        fs::write(
-            subdir.join(A8E_HINTS_FILENAME),
-            "Subdir .a8ehints content",
-        )
-        .unwrap();
+        fs::write(subdir.join(A8E_HINTS_FILENAME), "Subdir .a8ehints content").unwrap();
 
         let current_dir = subdir.join("current_dir");
         fs::create_dir(&current_dir).unwrap();
@@ -305,11 +289,7 @@ Additional instructions here."#;
         fs::write(project_root.join(A8E_HINTS_FILENAME), hints_content).unwrap();
 
         let gitignore = create_dummy_gitignore();
-        let hints = load_hint_files(
-            project_root,
-            &[A8E_HINTS_FILENAME.to_string()],
-            &gitignore,
-        );
+        let hints = load_hint_files(project_root, &[A8E_HINTS_FILENAME.to_string()], &gitignore);
 
         assert!(hints.contains("Project hints content"));
         assert!(hints.contains("Additional instructions here"));
@@ -429,11 +409,7 @@ End of hints"#;
         fs::write(current_dir.join(A8E_HINTS_FILENAME), hints_content).unwrap();
 
         let gitignore = create_dummy_gitignore();
-        let hints = load_hint_files(
-            &current_dir,
-            &[A8E_HINTS_FILENAME.to_string()],
-            &gitignore,
-        );
+        let hints = load_hint_files(&current_dir, &[A8E_HINTS_FILENAME.to_string()], &gitignore);
 
         assert!(hints.contains("Local content"));
         assert!(hints.contains("--- Content from local.md ---"));

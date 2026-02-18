@@ -19,8 +19,6 @@ use tokio::signal::ctrl_c;
 use tokio_util::task::AbortOnDropHandle;
 
 pub use self::export::message_to_markdown;
-pub use builder::{build_session, SessionBuilderConfig};
-use console::Color;
 use a8e_core::agents::AgentEvent;
 use a8e_core::agents::SUBAGENT_TOOL_REQUEST_TYPE;
 use a8e_core::permission::permission_confirmation::PrincipalType;
@@ -28,13 +26,15 @@ use a8e_core::permission::Permission;
 use a8e_core::permission::PermissionConfirmation;
 use a8e_core::providers::base::Provider;
 use a8e_core::utils::safe_truncate;
+pub use builder::{build_session, SessionBuilderConfig};
+use console::Color;
 
-use anyhow::{Context, Result};
-use completion::GooseCompleter;
 use a8e_core::agents::extension::{Envs, ExtensionConfig, PLATFORM_EXTENSIONS};
 use a8e_core::agents::types::RetryConfig;
 use a8e_core::agents::{Agent, SessionConfig, COMPACT_TRIGGERS};
 use a8e_core::config::{Config, GooseMode};
+use anyhow::{Context, Result};
+use completion::GooseCompleter;
 use input::InputResult;
 use rmcp::model::PromptMessage;
 use rmcp::model::ServerNotification;

@@ -1,9 +1,9 @@
 use crate::routes::errors::ErrorResponse;
 use crate::state::AppState;
-use axum::{routing::post, Json, Router};
 use a8e_core::config::signup_openrouter::OpenRouterAuth;
 use a8e_core::config::signup_tetrate::{configure_tetrate, TetrateAuth};
 use a8e_core::config::{configure_openrouter, Config};
+use axum::{routing::post, Json, Router};
 use serde::Serialize;
 use std::sync::Arc;
 use utoipa::ToSchema;

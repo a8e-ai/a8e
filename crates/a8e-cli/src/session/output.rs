@@ -1,6 +1,3 @@
-use anstream::println;
-use bat::WrappingMode;
-use console::{measure_text_width, style, Color, Term};
 use a8e_core::config::Config;
 use a8e_core::conversation::message::{
     ActionRequiredData, Message, MessageContent, ToolRequest, ToolResponse,
@@ -9,6 +6,9 @@ use a8e_core::providers::canonical::maybe_get_canonical_model;
 #[cfg(target_os = "windows")]
 use a8e_core::subprocess::SubprocessExt;
 use a8e_core::utils::safe_truncate;
+use anstream::println;
+use bat::WrappingMode;
+use console::{measure_text_width, style, Color, Term};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use rmcp::model::{CallToolRequestParams, JsonObject, PromptArgument};
 use serde_json::Value;

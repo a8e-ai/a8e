@@ -19,6 +19,7 @@ use super::{
     ollama::OllamaProvider,
     openai::OpenAiProvider,
     openrouter::OpenRouterProvider,
+    paean_ai::PaeanAiProvider,
     provider_registry::ProviderRegistry,
     sagemaker_tgi::SageMakerTgiProvider,
     snowflake::SnowflakeProvider,
@@ -60,6 +61,7 @@ async fn init_registry() -> RwLock<ProviderRegistry> {
         registry.register::<OllamaProvider>(true);
         registry.register::<OpenAiProvider>(true);
         registry.register::<OpenRouterProvider>(true);
+        registry.register::<PaeanAiProvider>(true);
         registry.register::<SageMakerTgiProvider>(false);
         registry.register::<SnowflakeProvider>(false);
         registry.register::<TetrateProvider>(true);

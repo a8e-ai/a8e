@@ -1,12 +1,6 @@
 use crate::routes::errors::ErrorResponse;
 use crate::routes::utils::check_provider_configured;
 use crate::state::AppState;
-use axum::routing::put;
-use axum::{
-    extract::Path,
-    routing::{delete, get, post},
-    Json, Router,
-};
 use a8e_core::config::declarative_providers::LoadedProvider;
 use a8e_core::config::paths::Paths;
 use a8e_core::config::ExtensionEntry;
@@ -20,6 +14,12 @@ use a8e_core::providers::providers as get_providers;
 use a8e_core::{
     agents::execute_commands, agents::ExtensionConfig, config::permission::PermissionLevel,
     slash_commands,
+};
+use axum::routing::put;
+use axum::{
+    extract::Path,
+    routing::{delete, get, post},
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

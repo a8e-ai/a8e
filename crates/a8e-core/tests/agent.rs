@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use anyhow::Result;
-use futures::StreamExt;
 use a8e_core::agents::{Agent, AgentEvent, GoosePlatform};
 use a8e_core::config::extensions::{set_extension, ExtensionEntry};
+use anyhow::Result;
+use futures::StreamExt;
 
 #[cfg(test)]
 mod tests {
@@ -12,8 +12,6 @@ mod tests {
     #[cfg(test)]
     mod schedule_tool_tests {
         use super::*;
-        use async_trait::async_trait;
-        use chrono::{DateTime, Utc};
         use a8e_core::agents::platform_tools::PLATFORM_MANAGE_SCHEDULE_TOOL_NAME;
         use a8e_core::agents::AgentConfig;
         use a8e_core::config::permission::PermissionManager;
@@ -21,6 +19,8 @@ mod tests {
         use a8e_core::scheduler::{ScheduledJob, SchedulerError};
         use a8e_core::scheduler_trait::SchedulerTrait;
         use a8e_core::session::{Session, SessionManager};
+        use async_trait::async_trait;
+        use chrono::{DateTime, Utc};
         use std::path::PathBuf;
         use std::sync::Arc;
         use tempfile::TempDir;
@@ -338,7 +338,6 @@ mod tests {
     #[cfg(test)]
     mod max_turns_tests {
         use super::*;
-        use async_trait::async_trait;
         use a8e_core::agents::SessionConfig;
         use a8e_core::conversation::message::{Message, MessageContent};
         use a8e_core::model::ModelConfig;
@@ -348,6 +347,7 @@ mod tests {
         };
         use a8e_core::providers::errors::ProviderError;
         use a8e_core::session::session_manager::SessionType;
+        use async_trait::async_trait;
         use rmcp::model::{CallToolRequestParams, Tool};
         use rmcp::object;
         use std::path::PathBuf;

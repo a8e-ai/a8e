@@ -1,10 +1,10 @@
-use axum::http::StatusCode;
 use a8e_core::builtin_extension::{register_builtin_extension, register_builtin_extensions};
 use a8e_core::config::paths::Paths;
 use a8e_core::execution::manager::AgentManager;
 use a8e_core::scheduler_trait::SchedulerTrait;
 use a8e_core::session::SessionManager;
 use a8e_mcp::DeveloperServer;
+use axum::http::StatusCode;
 use rmcp::ServiceExt;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -120,7 +120,10 @@ impl AppState {
         }
     }
 
-    pub async fn get_agent(&self, session_id: String) -> anyhow::Result<Arc<a8e_core::agents::Agent>> {
+    pub async fn get_agent(
+        &self,
+        session_id: String,
+    ) -> anyhow::Result<Arc<a8e_core::agents::Agent>> {
         self.agent_manager.get_or_create_agent(session_id).await
     }
 

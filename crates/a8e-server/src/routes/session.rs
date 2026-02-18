@@ -1,6 +1,10 @@
 use crate::routes::errors::ErrorResponse;
 use crate::routes::recipe_utils::{apply_recipe_to_agent, build_recipe_with_parameter_values};
 use crate::state::AppState;
+use a8e_core::agents::ExtensionConfig;
+use a8e_core::recipe::Recipe;
+use a8e_core::session::session_manager::SessionInsights;
+use a8e_core::session::{EnabledExtensionsState, Session};
 use axum::extract::{DefaultBodyLimit, State};
 use axum::routing::post;
 use axum::{
@@ -9,10 +13,6 @@ use axum::{
     routing::{delete, get, put},
     Json, Router,
 };
-use a8e_core::agents::ExtensionConfig;
-use a8e_core::recipe::Recipe;
-use a8e_core::session::session_manager::SessionInsights;
-use a8e_core::session::{EnabledExtensionsState, Session};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -1,9 +1,9 @@
+use a8e_core::session::{generate_diagnostics, get_system_info, SystemInfo};
 use axum::body::Body;
 use axum::extract::State;
 use axum::http::HeaderValue;
 use axum::response::IntoResponse;
 use axum::{extract::Path, http::StatusCode, routing::get, Json, Router};
-use a8e_core::session::{generate_diagnostics, get_system_info, SystemInfo};
 use std::sync::Arc;
 
 use crate::state::AppState;

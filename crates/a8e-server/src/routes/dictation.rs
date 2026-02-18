@@ -1,5 +1,10 @@
 use crate::routes::errors::ErrorResponse;
 use crate::state::AppState;
+use a8e_core::dictation::download_manager::{get_download_manager, DownloadProgress};
+use a8e_core::dictation::providers::{
+    is_configured, transcribe_local, transcribe_with_provider, DictationProvider, PROVIDERS,
+};
+use a8e_core::dictation::whisper;
 use axum::{
     extract::{DefaultBodyLimit, Path},
     http::StatusCode,
@@ -7,11 +12,6 @@ use axum::{
     Json, Router,
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use a8e_core::dictation::download_manager::{get_download_manager, DownloadProgress};
-use a8e_core::dictation::providers::{
-    is_configured, transcribe_local, transcribe_with_provider, DictationProvider, PROVIDERS,
-};
-use a8e_core::dictation::whisper;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;

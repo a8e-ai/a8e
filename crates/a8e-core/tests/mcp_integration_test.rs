@@ -17,13 +17,13 @@ use a8e_core::model::ModelConfig;
 
 use test_case::test_case;
 
-use async_trait::async_trait;
 use a8e_core::conversation::message::Message;
 use a8e_core::providers::base::{
     stream_from_single_message, MessageStream, Provider, ProviderDef, ProviderMetadata,
     ProviderUsage, Usage,
 };
 use a8e_core::providers::errors::ProviderError;
+use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use std::process::Command;
 

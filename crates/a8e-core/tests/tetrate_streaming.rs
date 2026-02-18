@@ -1,9 +1,9 @@
-use anyhow::Result;
-use futures::StreamExt;
 use a8e_core::conversation::message::{Message, MessageContent};
 use a8e_core::model::ModelConfig;
 use a8e_core::providers::base::Provider;
 use a8e_core::providers::tetrate::TetrateProvider;
+use anyhow::Result;
+use futures::StreamExt;
 use rmcp::model::Tool;
 use rmcp::object;
 use serial_test::serial;

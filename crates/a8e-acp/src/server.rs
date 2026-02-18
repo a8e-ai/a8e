@@ -1,5 +1,3 @@
-use anyhow::Result;
-use fs_err as fs;
 use a8e_core::agents::extension::{Envs, PLATFORM_EXTENSIONS};
 use a8e_core::agents::{Agent, AgentConfig, ExtensionConfig, GoosePlatform, SessionConfig};
 use a8e_core::builtin_extension::register_builtin_extensions;
@@ -17,6 +15,8 @@ use a8e_core::providers::base::Provider;
 use a8e_core::providers::provider_registry::ProviderConstructor;
 use a8e_core::session::session_manager::SessionType;
 use a8e_core::session::{Session, SessionManager};
+use anyhow::Result;
+use fs_err as fs;
 use rmcp::model::{CallToolResult, RawContent, ResourceContents, Role};
 use sacp::schema::{
     AgentCapabilities, AuthMethod, AuthenticateRequest, AuthenticateResponse, BlobResourceContents,
@@ -660,13 +660,10 @@ impl GooseAcpAgent {
             .mcp_capabilities(McpCapabilities::new().http(true));
         Ok(InitializeResponse::new(args.protocol_version)
             .agent_capabilities(capabilities)
-            .auth_methods(vec![AuthMethod::new(
-                "a8e-provider",
-                "Configure Provider",
-            )
-            .description(
-                "Run `a8e configure` to set up your AI provider and API key",
-            )]))
+            .auth_methods(vec![AuthMethod::new("a8e-provider", "Configure Provider")
+                .description(
+                    "Run `a8e configure` to set up your AI provider and API key",
+                )]))
     }
 
     async fn on_new_session(

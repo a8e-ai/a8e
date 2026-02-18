@@ -1,3 +1,7 @@
+use a8e_core::providers::canonical::{
+    canonical_name, CanonicalModel, CanonicalModelRegistry, Limit, Modalities, Modality, Pricing,
+};
+use a8e_core::providers::{canonical::ModelMapping, create_with_named_model};
 /// Build canonical models from models.dev API
 ///
 /// This script fetches models from models.dev and converts them to canonical format.
@@ -9,10 +13,6 @@
 ///
 use anyhow::{Context, Result};
 use clap::Parser;
-use a8e_core::providers::canonical::{
-    canonical_name, CanonicalModel, CanonicalModelRegistry, Limit, Modalities, Modality, Pricing,
-};
-use a8e_core::providers::{canonical::ModelMapping, create_with_named_model};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet, HashMap};

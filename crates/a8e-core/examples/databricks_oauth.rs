@@ -1,8 +1,8 @@
-use anyhow::Result;
-use dotenvy::dotenv;
 use a8e_core::conversation::message::Message;
 use a8e_core::providers::create_with_named_model;
 use a8e_core::providers::databricks::DATABRICKS_DEFAULT_MODEL;
+use anyhow::Result;
+use dotenvy::dotenv;
 
 #[tokio::main]
 async fn main() -> Result<()> {

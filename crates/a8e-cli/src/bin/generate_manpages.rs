@@ -16,9 +16,9 @@
 //!
 //! Output: target/man/a8e.1, target/man/a8e-session.1, etc.
 
+use a8e::Cli;
 use clap::CommandFactory;
 use clap_mangen::Man;
-use a8e::Cli;
 use std::env;
 use std::fs;
 use std::io::Result;

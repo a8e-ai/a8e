@@ -1,3 +1,4 @@
+pub mod a8e_apps;
 pub mod action_required_manager;
 pub mod agents;
 pub mod builtin_extension;
@@ -6,7 +7,6 @@ pub mod context_mgmt;
 pub mod conversation;
 pub mod dictation;
 pub mod execution;
-pub mod a8e_apps;
 pub mod hints;
 pub mod logging;
 pub mod mcp_utils;

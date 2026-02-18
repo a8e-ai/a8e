@@ -31,14 +31,14 @@ jobs:
             build-on: ubuntu-latest
             use-cross: true
           - os: macos
-            architecture: x86_64
+            architecture: aarch64
             target-suffix: apple-darwin
             build-on: macos-latest
             use-cross: false
           - os: macos
-            architecture: aarch64
+            architecture: x86_64
             target-suffix: apple-darwin
-            build-on: macos-latest
+            build-on: macos-13
             use-cross: false
           - os: windows
             architecture: x86_64
@@ -61,7 +61,10 @@ jobs:
         if: ${{ inputs.version != '' }}
         shell: bash
         run: |
-          sed -i.bak 's/^version = ".*"/version = "'${{ inputs.version }}'"/' Cargo.toml
+          VERSION="${{ inputs.version }}"
+          # Strip build metadata (+...) as Cargo doesn't support it in workspace version
+          VERSION_CLEAN=$(echo "$VERSION" | sed 's/+.*//')
+          sed -i.bak "s/^version = \".*\"/version = \"${VERSION_CLEAN}\"/" Cargo.toml
           rm -f Cargo.toml.bak
 
       - name: Install cross (Linux)
@@ -77,13 +80,15 @@ jobs:
         shell: bash
         run: rustup target add ${{ matrix.architecture }}-${{ matrix.target-suffix }}
 
-      - name: Build CLI (cross)
+      - name: Build CLI (cross - Linux)
         if: matrix.use-cross
+        env:
+          CROSS_NO_WARNINGS: 0
         run: |
           export TARGET="${{ matrix.architecture }}-${{ matrix.target-suffix }}"
           cross build --release --target ${TARGET} -p a8e
 
-      - name: Build CLI (native)
+      - name: Build CLI (native - macOS/Windows)
         if: ${{ !matrix.use-cross }}
         shell: bash
         run: |

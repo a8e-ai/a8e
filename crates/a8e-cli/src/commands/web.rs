@@ -1,3 +1,6 @@
+use a8e_core::agents::{Agent, AgentEvent};
+use a8e_core::conversation::message::Message as GooseMessage;
+use a8e_core::session::session_manager::SessionType;
 use anyhow::Result;
 use axum::response::Redirect;
 use axum::{
@@ -13,9 +16,6 @@ use axum::{
 };
 use base64::Engine;
 use futures::{sink::SinkExt, stream::StreamExt};
-use a8e_core::agents::{Agent, AgentEvent};
-use a8e_core::conversation::message::Message as GooseMessage;
-use a8e_core::session::session_manager::SessionType;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{net::ToSocketAddrs, sync::Arc};
@@ -168,7 +168,8 @@ fn get_provider_and_model() -> (String, String) {
 }
 
 async fn create_agent(provider_name: &str, model: &str) -> Result<Agent> {
-    let model_config = a8e_core::model::ModelConfig::new(model)?.with_canonical_limits(provider_name);
+    let model_config =
+        a8e_core::model::ModelConfig::new(model)?.with_canonical_limits(provider_name);
 
     let agent = Agent::new();
 
@@ -188,7 +189,8 @@ async fn create_agent(provider_name: &str, model: &str) -> Result<Agent> {
         }
     }
 
-    let provider = a8e_core::providers::create(provider_name, model_config, enabled_configs).await?;
+    let provider =
+        a8e_core::providers::create(provider_name, model_config, enabled_configs).await?;
     agent.update_provider(provider, &init_session.id).await?;
 
     Ok(agent)

@@ -240,7 +240,7 @@ impl ClientHandler for GooseClient {
         let system_prompt = params
             .system_prompt
             .as_deref()
-                .unwrap_or("You are a general-purpose AI agent called Articulate");
+            .unwrap_or("You are a general-purpose AI agent called Articulate");
 
         let model_config = provider.get_model_config();
         let (response, usage) = provider

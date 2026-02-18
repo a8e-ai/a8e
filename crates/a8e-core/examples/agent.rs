@@ -1,11 +1,11 @@
-use dotenvy::dotenv;
-use futures::StreamExt;
 use a8e_core::agents::{Agent, AgentEvent, ExtensionConfig, SessionConfig};
 use a8e_core::config::{DEFAULT_EXTENSION_DESCRIPTION, DEFAULT_EXTENSION_TIMEOUT};
 use a8e_core::conversation::message::Message;
 use a8e_core::providers::create_with_named_model;
 use a8e_core::providers::databricks::DATABRICKS_DEFAULT_MODEL;
 use a8e_core::session::session_manager::SessionType;
+use dotenvy::dotenv;
+use futures::StreamExt;
 use std::path::PathBuf;
 
 #[tokio::main]

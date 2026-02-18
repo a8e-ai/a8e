@@ -20,10 +20,7 @@ pub(crate) fn to_env_var(field_path: &str) -> String {
         format!("provider.{}", field_path)
     };
 
-    format!(
-        "A8E_{}",
-        normalized_path.replace('.', "__").to_uppercase()
-    )
+    format!("A8E_{}", normalized_path.replace('.', "__").to_uppercase())
 }
 
 #[cfg(test)]

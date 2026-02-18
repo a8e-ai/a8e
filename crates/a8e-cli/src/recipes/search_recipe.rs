@@ -1,6 +1,6 @@
-use anyhow::Result;
 use a8e_core::config::Config;
 use a8e_core::recipe::read_recipe_file_content::RecipeFile;
+use anyhow::Result;
 
 use super::github_recipe::{
     list_github_recipes, retrieve_recipe_from_github, RecipeInfo, RecipeSource,

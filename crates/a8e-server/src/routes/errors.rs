@@ -1,11 +1,11 @@
+use a8e_core::config::ConfigError;
+use a8e_core::model::ConfigError as ModelConfigError;
+use a8e_core::providers::errors::ProviderError;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
-use a8e_core::config::ConfigError;
-use a8e_core::model::ConfigError as ModelConfigError;
-use a8e_core::providers::errors::ProviderError;
 use serde::Serialize;
 use utoipa::ToSchema;
 

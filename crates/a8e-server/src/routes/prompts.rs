@@ -1,11 +1,11 @@
 use crate::routes::errors::ErrorResponse;
+use a8e_core::prompt_template::{
+    get_template, list_templates, reset_template, save_template, Template,
+};
 use axum::{
     extract::Path,
     routing::{delete, get, put},
     Json, Router,
-};
-use a8e_core::prompt_template::{
-    get_template, list_templates, reset_template, save_template, Template,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

@@ -1,10 +1,10 @@
-use anyhow::{anyhow, Result};
-use async_trait::async_trait;
 use a8e_core::config::GooseMode;
 use a8e_core::conversation::message::{Message, ToolRequest};
 use a8e_core::tool_inspection::{
     InspectionAction, InspectionResult, ToolInspectionManager, ToolInspector,
 };
+use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 
 struct MockInspectorOk {
     name: &'static str,

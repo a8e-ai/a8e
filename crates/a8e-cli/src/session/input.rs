@@ -1,7 +1,7 @@
 use super::completion::GooseCompleter;
 use super::{CompletionCache, HintStatus};
-use anyhow::Result;
 use a8e_core::config::Config;
+use anyhow::Result;
 use rustyline::Editor;
 use shlex;
 use std::collections::HashMap;

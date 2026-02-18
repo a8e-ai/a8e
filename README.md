@@ -39,10 +39,15 @@ rebuilt with a focus on **developer sovereignty**:
 ## Quick Start
 
 ```bash
-# Install from crates.io
-cargo install a8e
+# One-line install (macOS / Linux)
+curl -fsSL https://a8e.ai/install.sh | bash
 
-# Initialize configuration
+# Or install via Cargo
+cargo install a8e
+```
+
+```bash
+# Configure your provider and model
 a8e configure
 
 # Start a session

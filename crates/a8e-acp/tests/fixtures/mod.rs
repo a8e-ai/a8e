@@ -1,8 +1,7 @@
 #![recursion_limit = "256"]
 #![allow(unused_attributes)]
 
-use async_trait::async_trait;
-use fs_err as fs;
+use a8e_acp::server::{serve, GooseAcpAgent};
 use a8e_core::builtin_extension::register_builtin_extensions;
 use a8e_core::config::{GooseMode, PermissionManager};
 use a8e_core::providers::api_client::{ApiClient, AuthMethod};
@@ -10,8 +9,9 @@ use a8e_core::providers::base::Provider;
 use a8e_core::providers::openai::OpenAiProvider;
 use a8e_core::providers::provider_registry::ProviderConstructor;
 use a8e_core::session_context::SESSION_ID_HEADER;
-use a8e_acp::server::{serve, GooseAcpAgent};
 use a8e_test_support::{ExpectedSessionId, TEST_MODEL};
+use async_trait::async_trait;
+use fs_err as fs;
 use sacp::schema::{
     McpServer, PermissionOptionKind, RequestPermissionOutcome, RequestPermissionRequest,
     RequestPermissionResponse, SelectedPermissionOutcome, SessionModelState, ToolCallStatus,

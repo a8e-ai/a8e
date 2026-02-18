@@ -32,10 +32,7 @@ impl<'a> FileTraverser<'a> {
         if self.is_ignored(path) {
             return Err(ErrorData::new(
                 ErrorCode::INVALID_PARAMS,
-                format!(
-                    "Access to '{}' is restricted by .a8eignore",
-                    path.display()
-                ),
+                format!("Access to '{}' is restricted by .a8eignore", path.display()),
                 None,
             ));
         }

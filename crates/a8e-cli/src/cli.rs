@@ -1,6 +1,3 @@
-use anyhow::Result;
-use clap::{Args, CommandFactory, Parser, Subcommand};
-use clap_complete::{generate, Shell as ClapShell};
 use a8e_core::builtin_extension::register_builtin_extensions;
 use a8e_core::config::Config;
 use a8e_core::posthog::get_telemetry_choice;
@@ -9,6 +6,9 @@ use a8e_mcp::mcp_server_runner::{serve, McpCommand};
 use a8e_mcp::{
     AutoVisualiserRouter, ComputerControllerServer, DeveloperServer, MemoryServer, TutorialServer,
 };
+use anyhow::Result;
+use clap::{Args, CommandFactory, Parser, Subcommand};
+use clap_complete::{generate, Shell as ClapShell};
 
 use crate::commands::configure::{configure_telemetry_consent_dialog, handle_configure};
 use crate::commands::info::handle_info;

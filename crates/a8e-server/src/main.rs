@@ -9,13 +9,13 @@ mod tunnel;
 
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
 use a8e_core::agents::validate_extensions;
 use a8e_core::config::paths::Paths;
 use a8e_mcp::{
     mcp_server_runner::{serve, McpCommand},
     AutoVisualiserRouter, ComputerControllerServer, DeveloperServer, MemoryServer, TutorialServer,
 };
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

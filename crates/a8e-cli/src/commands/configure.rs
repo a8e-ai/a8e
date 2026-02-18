@@ -1,6 +1,4 @@
 use crate::recipes::github_recipe::GOOSE_RECIPE_GITHUB_REPO_CONFIG_KEY;
-use cliclack::spinner;
-use console::style;
 use a8e_core::agents::extension::ToolInfo;
 use a8e_core::agents::extension_manager::get_parameter_names;
 use a8e_core::agents::Agent;
@@ -25,6 +23,8 @@ use a8e_core::providers::base::ConfigKey;
 use a8e_core::providers::provider_test::test_provider_configuration;
 use a8e_core::providers::{create, providers, retry_operation, RetryConfig};
 use a8e_core::session::SessionType;
+use cliclack::spinner;
+use console::style;
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -54,8 +54,10 @@ pub fn configure_telemetry_consent_dialog() -> anyhow::Result<bool> {
     );
     println!(
         "{}",
-        style("This helps us understand how Articulate is used and identify areas for improvement.")
-            .dim()
+        style(
+            "This helps us understand how Articulate is used and identify areas for improvement."
+        )
+        .dim()
     );
     println!();
     println!("{}", style("What we collect:").dim());
@@ -105,7 +107,10 @@ pub fn configure_telemetry_consent_dialog() -> anyhow::Result<bool> {
 
 async fn handle_first_time_setup(config: &Config) -> anyhow::Result<()> {
     println!();
-    println!("{}", style("Welcome to Articulate! Let's get you set up.").dim());
+    println!(
+        "{}",
+        style("Welcome to Articulate! Let's get you set up.").dim()
+    );
     println!(
         "{}",
         style("  you can rerun this command later to update your configuration").dim()
@@ -1638,10 +1643,9 @@ fn configure_recipe_dialog() -> anyhow::Result<()> {
     let default_recipe_repo = std::env::var(key_name)
         .ok()
         .or_else(|| config.get_param(key_name).unwrap_or(None));
-    let mut recipe_repo_input = cliclack::input(
-        "Enter your a8e recipe GitHub repo (owner/repo): eg: my_org/a8e-recipes",
-    )
-    .required(false);
+    let mut recipe_repo_input =
+        cliclack::input("Enter your a8e recipe GitHub repo (owner/repo): eg: my_org/a8e-recipes")
+            .required(false);
     if let Some(recipe_repo) = default_recipe_repo {
         recipe_repo_input = recipe_repo_input.default_input(&recipe_repo);
     }
@@ -1747,7 +1751,9 @@ pub async fn handle_openrouter_auth() -> anyhow::Result<()> {
                             enabled: true,
                             config: ExtensionConfig::Builtin {
                                 name: "developer".to_string(),
-                                display_name: Some(a8e_core::config::DEFAULT_DISPLAY_NAME.to_string()),
+                                display_name: Some(
+                                    a8e_core::config::DEFAULT_DISPLAY_NAME.to_string(),
+                                ),
                                 timeout: Some(a8e_core::config::DEFAULT_EXTENSION_TIMEOUT),
                                 bundled: Some(true),
                                 description: "Developer extension".to_string(),
@@ -1817,7 +1823,9 @@ pub async fn handle_tetrate_auth() -> anyhow::Result<()> {
                             enabled: true,
                             config: ExtensionConfig::Builtin {
                                 name: "developer".to_string(),
-                                display_name: Some(a8e_core::config::DEFAULT_DISPLAY_NAME.to_string()),
+                                display_name: Some(
+                                    a8e_core::config::DEFAULT_DISPLAY_NAME.to_string(),
+                                ),
                                 timeout: Some(a8e_core::config::DEFAULT_EXTENSION_TIMEOUT),
                                 bundled: Some(true),
                                 description: "Developer extension".to_string(),

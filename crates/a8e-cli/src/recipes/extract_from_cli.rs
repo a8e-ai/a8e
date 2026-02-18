@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
 use a8e_core::recipe::{Recipe, SubRecipe};
+use anyhow::{anyhow, Result};
 
 use crate::cli::InputConfig;
 use crate::recipes::print_recipe::print_recipe_info;

@@ -1,8 +1,8 @@
-use anyhow::Result;
-use console::style;
 use a8e_core::config::paths::Paths;
 use a8e_core::config::Config;
 use a8e_core::session::session_manager::{DB_NAME, SESSIONS_FOLDER};
+use anyhow::Result;
+use console::style;
 use serde_yaml;
 
 fn print_aligned(label: &str, value: &str, width: usize) {
@@ -74,10 +74,7 @@ pub fn handle_info(verbose: bool) -> Result<()> {
         let values = config.all_values()?;
         if values.is_empty() {
             println!("  No configuration values set");
-            println!(
-                "  Run '{}' to configure a8e",
-                style("a8e configure").cyan()
-            );
+            println!("  Run '{}' to configure a8e", style("a8e configure").cyan());
         } else {
             let sorted_values: std::collections::BTreeMap<_, _> =
                 values.iter().map(|(k, v)| (k.clone(), v.clone())).collect();

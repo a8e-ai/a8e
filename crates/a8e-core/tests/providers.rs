@@ -1,5 +1,3 @@
-use anyhow::Result;
-use dotenvy::dotenv;
 use a8e_core::agents::extension_manager::ExtensionManagerCapabilities;
 use a8e_core::agents::{ExtensionManager, GoosePlatform, PromptManager};
 use a8e_core::config::ExtensionConfig;
@@ -21,6 +19,8 @@ use a8e_core::providers::snowflake::SNOWFLAKE_DEFAULT_MODEL;
 use a8e_core::providers::xai::XAI_DEFAULT_MODEL;
 use a8e_core::session::SessionManager;
 use a8e_test_support::{ExpectedSessionId, McpFixture, FAKE_CODE, TEST_SESSION_ID};
+use anyhow::Result;
+use dotenvy::dotenv;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio_util::sync::CancellationToken;

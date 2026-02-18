@@ -181,9 +181,7 @@ fn get_on_failure_timeout(retry_config: &RetryConfig) -> Duration {
         .on_failure_timeout_seconds
         .or_else(|| {
             let config = Config::global();
-            config
-                .get_param(A8E_RECIPE_ON_FAILURE_TIMEOUT_SECONDS)
-                .ok()
+            config.get_param(A8E_RECIPE_ON_FAILURE_TIMEOUT_SECONDS).ok()
         })
         .unwrap_or(DEFAULT_ON_FAILURE_TIMEOUT_SECONDS);
 

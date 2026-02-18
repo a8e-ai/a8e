@@ -7,7 +7,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 use crate::agents::extension::ExtensionInfo;
-use crate::hints::load_hints::{load_hint_files, AGENTS_MD_FILENAME, A8E_HINTS_FILENAME};
+use crate::hints::load_hints::{load_hint_files, A8E_HINTS_FILENAME, AGENTS_MD_FILENAME};
 use crate::{
     config::{Config, GooseMode},
     prompt_template,

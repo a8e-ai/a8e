@@ -768,10 +768,7 @@ impl DeveloperServer {
         if self.is_ignored(&path) {
             return Err(ErrorData::new(
                 ErrorCode::INTERNAL_ERROR,
-                format!(
-                    "Access to '{}' is restricted by .a8eignore",
-                    path.display()
-                ),
+                format!("Access to '{}' is restricted by .a8eignore", path.display()),
                 None,
             ));
         }
@@ -1228,10 +1225,7 @@ impl DeveloperServer {
         if self.is_ignored(&path) {
             return Err(ErrorData::new(
                 ErrorCode::INTERNAL_ERROR,
-                format!(
-                    "Access to '{}' is restricted by .a8eignore",
-                    path.display()
-                ),
+                format!("Access to '{}' is restricted by .a8eignore", path.display()),
                 None,
             ));
         }

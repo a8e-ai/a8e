@@ -2,8 +2,8 @@ use super::{
     map_permission_response, spawn_acp_server_in_process, Connection, PermissionDecision,
     PermissionMapping, Session, TestConnectionConfig, TestOutput,
 };
-use async_trait::async_trait;
 use a8e_core::config::PermissionManager;
+use async_trait::async_trait;
 use sacp::schema::{
     ContentBlock, InitializeRequest, LoadSessionRequest, McpServer, NewSessionRequest,
     PromptRequest, ProtocolVersion, RequestPermissionRequest, SessionModelState,

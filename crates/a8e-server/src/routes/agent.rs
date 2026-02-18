@@ -3,6 +3,8 @@ use crate::routes::recipe_utils::{
     apply_recipe_to_agent, build_recipe_with_parameter_values, load_recipe_by_id, validate_recipe,
 };
 use crate::state::AppState;
+use a8e_core::a8e_apps::{fetch_mcp_apps, GooseApp, McpAppCache};
+use a8e_core::agents::{Container, ExtensionLoadResult};
 use axum::response::IntoResponse;
 use axum::{
     extract::{Query, State},
@@ -10,10 +12,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use a8e_core::agents::{Container, ExtensionLoadResult};
-use a8e_core::a8e_apps::{fetch_mcp_apps, GooseApp, McpAppCache};
 
-use base64::Engine;
 use a8e_core::agents::ExtensionConfig;
 use a8e_core::config::resolve_extensions_for_new_session;
 use a8e_core::config::{Config, GooseMode};
@@ -27,6 +26,7 @@ use a8e_core::{
     agents::{extension::ToolInfo, extension_manager::get_parameter_names},
     config::permission::PermissionLevel,
 };
+use base64::Engine;
 use rmcp::model::{CallToolRequestParams, Content};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

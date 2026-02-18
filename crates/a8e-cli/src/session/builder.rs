@@ -2,7 +2,6 @@ use crate::cli::StreamableHttpOptions;
 
 use super::output;
 use super::CliSession;
-use console::style;
 use a8e_core::agents::{Agent, Container, ExtensionError};
 use a8e_core::config::resolve_extensions_for_new_session;
 use a8e_core::config::{get_all_extensions, Config, ExtensionConfig};
@@ -10,6 +9,7 @@ use a8e_core::providers::create;
 use a8e_core::recipe::Recipe;
 use a8e_core::session::session_manager::SessionType;
 use a8e_core::session::EnabledExtensionsState;
+use console::style;
 use rustyline::EditMode;
 use std::collections::BTreeSet;
 use std::process;

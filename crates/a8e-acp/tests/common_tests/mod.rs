@@ -4,15 +4,15 @@
 
 #[path = "../fixtures/mod.rs"]
 pub mod fixtures;
+use a8e_acp::server::GooseAcpAgent;
+use a8e_core::config::base::CONFIG_YAML_NAME;
+use a8e_core::config::GooseMode;
+use a8e_core::providers::provider_registry::ProviderConstructor;
+use a8e_test_support::{ExpectedSessionId, McpFixture, FAKE_CODE, TEST_MODEL};
 use fixtures::{
     initialize_agent, Connection, OpenAiFixture, PermissionDecision, Session, TestConnectionConfig,
 };
 use fs_err as fs;
-use a8e_core::config::base::CONFIG_YAML_NAME;
-use a8e_core::config::GooseMode;
-use a8e_core::providers::provider_registry::ProviderConstructor;
-use a8e_acp::server::GooseAcpAgent;
-use a8e_test_support::{ExpectedSessionId, McpFixture, FAKE_CODE, TEST_MODEL};
 use sacp::schema::{
     McpServer, McpServerHttp, ModelId, ModelInfo, SessionModelState, ToolCallStatus,
 };
@@ -80,10 +80,7 @@ pub async fn run_initialize_without_provider() {
 
     let resp = initialize_agent(agent).await;
     assert!(!resp.auth_methods.is_empty());
-    assert!(resp
-        .auth_methods
-        .iter()
-        .any(|m| &*m.id.0 == "a8e-provider"));
+    assert!(resp.auth_methods.iter().any(|m| &*m.id.0 == "a8e-provider"));
 }
 
 pub async fn run_load_model<C: Connection>() {

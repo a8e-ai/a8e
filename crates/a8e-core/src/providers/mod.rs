@@ -28,6 +28,7 @@ pub mod ollama;
 pub mod openai;
 pub mod openai_compatible;
 pub mod openrouter;
+pub mod paean_ai;
 pub mod provider_registry;
 pub mod provider_test;
 mod retry;

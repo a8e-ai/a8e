@@ -4,13 +4,13 @@ use crate::recipes::print_recipe::{
 };
 use crate::recipes::search_recipe::load_recipe_file;
 use crate::recipes::secret_discovery::{discover_recipe_secrets, SecretRequirement};
-use anyhow::Result;
 use a8e_core::config::Config;
 use a8e_core::recipe::build_recipe::{
     apply_values_to_parameters, build_recipe_from_template, RecipeError,
 };
 use a8e_core::recipe::validate_recipe::parse_and_validate_parameters;
 use a8e_core::recipe::Recipe;
+use anyhow::Result;
 
 fn create_user_prompt_callback() -> impl Fn(&str, &str) -> Result<String> {
     |key: &str, description: &str| -> Result<String> {

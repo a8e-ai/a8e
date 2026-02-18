@@ -1,5 +1,9 @@
 use crate::routes::errors::ErrorResponse;
 use crate::state::AppState;
+use a8e_core::agents::{AgentEvent, SessionConfig};
+use a8e_core::conversation::message::{Message, MessageContent, TokenState};
+use a8e_core::conversation::Conversation;
+use a8e_core::session::SessionManager;
 #[cfg(test)]
 use axum::http::StatusCode;
 use axum::{
@@ -11,10 +15,6 @@ use axum::{
 };
 use bytes::Bytes;
 use futures::{stream::StreamExt, Stream};
-use a8e_core::agents::{AgentEvent, SessionConfig};
-use a8e_core::conversation::message::{Message, MessageContent, TokenState};
-use a8e_core::conversation::Conversation;
-use a8e_core::session::SessionManager;
 use rmcp::model::ServerNotification;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -471,8 +471,8 @@ mod tests {
 
     mod integration_tests {
         use super::*;
-        use axum::{body::Body, http::Request};
         use a8e_core::conversation::message::Message;
+        use axum::{body::Body, http::Request};
         use tower::ServiceExt;
 
         #[tokio::test(flavor = "multi_thread")]

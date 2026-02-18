@@ -1,9 +1,9 @@
+use crate::a8e_apps::McpAppResource;
+use crate::a8e_apps::{GooseApp, WindowProps};
 use crate::agents::extension::PlatformExtensionContext;
 use crate::agents::mcp_client::{Error, McpClientTrait};
 use crate::config::paths::Paths;
 use crate::conversation::message::Message;
-use crate::a8e_apps::McpAppResource;
-use crate::a8e_apps::{GooseApp, WindowProps};
 use crate::prompt_template::render_template;
 use crate::providers::base::Provider;
 use async_trait::async_trait;

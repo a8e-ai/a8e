@@ -495,10 +495,8 @@ impl SummonClient {
         let home = dirs::home_dir();
         let config = Paths::config_dir();
 
-        let local_recipe_dirs: Vec<PathBuf> = vec![
-            working_dir.to_path_buf(),
-            working_dir.join(".a8e/recipes"),
-        ];
+        let local_recipe_dirs: Vec<PathBuf> =
+            vec![working_dir.to_path_buf(), working_dir.join(".a8e/recipes")];
 
         let global_recipe_dirs: Vec<PathBuf> = std::env::var("A8E_RECIPE_PATH")
             .ok()

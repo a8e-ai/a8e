@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
+use a8e_core::recipe::{Recipe, BUILT_IN_RECIPE_DIR_PARAM};
 use anstream::println;
 use console::style;
-use a8e_core::recipe::{Recipe, BUILT_IN_RECIPE_DIR_PARAM};
 
 pub fn print_recipe_explanation(recipe: &Recipe) {
     println!(

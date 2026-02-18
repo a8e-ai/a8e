@@ -1,8 +1,8 @@
 use crate::configuration;
 use crate::state;
+use a8e_server::auth::check_token;
 use anyhow::Result;
 use axum::middleware;
-use a8e_server::auth::check_token;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
@@ -30,8 +30,7 @@ pub async fn run() -> Result<()> {
 
     let settings = configuration::Settings::new()?;
 
-    let secret_key =
-        std::env::var("A8E_SERVER__SECRET_KEY").unwrap_or_else(|_| "test".to_string());
+    let secret_key = std::env::var("A8E_SERVER__SECRET_KEY").unwrap_or_else(|_| "test".to_string());
 
     let app_state = state::AppState::new().await?;
 

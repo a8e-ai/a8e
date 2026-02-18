@@ -1,5 +1,5 @@
-use anyhow::Result;
 use a8e::cli::cli;
+use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {

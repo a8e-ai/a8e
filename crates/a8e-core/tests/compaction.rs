@@ -1,6 +1,3 @@
-use anyhow::Result;
-use async_trait::async_trait;
-use futures::StreamExt;
 use a8e_core::agents::{Agent, AgentEvent, SessionConfig};
 use a8e_core::conversation::message::{Message, MessageContent};
 use a8e_core::conversation::Conversation;
@@ -12,6 +9,9 @@ use a8e_core::providers::base::{
 use a8e_core::providers::errors::ProviderError;
 use a8e_core::session::session_manager::SessionType;
 use a8e_core::session::Session;
+use anyhow::Result;
+use async_trait::async_trait;
+use futures::StreamExt;
 use rmcp::model::Tool;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
