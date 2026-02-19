@@ -96,7 +96,7 @@ fn build_and_get_binary_path() -> PathBuf {
             "build",
             "--frozen",
             "-p",
-            "goose-test",
+            "a8e-test",
             "--bin",
             "capture",
             "--message-format=json",
