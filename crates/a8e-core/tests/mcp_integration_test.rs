@@ -181,7 +181,7 @@ async fn test_replayed_session(
     tool_calls: Vec<CallToolRequestParams>,
     required_envs: Vec<&str>,
 ) {
-    std::env::set_var("GOOSE_MCP_CLIENT_VERSION", "0.0.0");
+    std::env::set_var("A8E_MCP_CLIENT_VERSION", "0.0.0");
 
     // Setup test file for developer extension tests
     let test_file_path = "/tmp/a8e_test/goose.txt";
