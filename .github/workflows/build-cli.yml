@@ -38,7 +38,7 @@ jobs:
           - os: macos
             architecture: x86_64
             target-suffix: apple-darwin
-            build-on: macos-13
+            build-on: macos-latest
             use-cross: false
           - os: windows
             architecture: x86_64

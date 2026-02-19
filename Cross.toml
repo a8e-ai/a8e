@@ -30,7 +30,9 @@ pre-build = [
      libssl-dev \
      libdbus-1-dev \
      libxcb1-dev \
-     gcc-10
+     gcc-10 \
+     nasm \
+     cmake
     """
 ]
 
