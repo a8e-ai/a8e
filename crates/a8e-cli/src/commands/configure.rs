@@ -1377,50 +1377,43 @@ pub fn configure_tool_output_dialog() -> anyhow::Result<()> {
 pub fn configure_keyring_dialog() -> anyhow::Result<()> {
     let config = Config::global();
 
-    if std::env::var("A8E_DISABLE_KEYRING").is_ok() {
-        let _ = cliclack::log::info("Notice: A8E_DISABLE_KEYRING environment variable is set and will override the configuration here.");
-    }
+    let keyring_enabled = config
+        .get_param::<bool>("A8E_KEYRING")
+        .unwrap_or(false);
 
-    let currently_disabled = config.get_param::<String>("A8E_DISABLE_KEYRING").is_ok();
-
-    let current_status = if currently_disabled {
-        "Disabled (using file-based storage)"
+    let current_status = if keyring_enabled {
+        "System Keyring"
     } else {
-        "Enabled (using system keyring)"
+        "File-based (default)"
     };
 
     let _ = cliclack::log::info(format!("Current secret storage: {}", current_status));
-    let _ = cliclack::log::warning("Note: Disabling the keyring stores secrets in a plain text file (~/.config/a8e/secrets.yaml)");
 
     let storage_option = cliclack::select("How would you like to store secrets?")
         .item(
-            "keyring",
-            "System Keyring (recommended)",
-            "Use secure system keyring for storing API keys and secrets",
+            "file",
+            "File-based Storage (recommended)",
+            "Store secrets in ~/.config/a8e/secrets.yaml — no password prompts",
         )
         .item(
-            "file",
-            "File-based Storage",
-            "Store secrets in a local file (useful when keyring access is restricted)",
+            "keyring",
+            "System Keyring",
+            "Use OS keychain (may require password on each launch)",
         )
         .interact()?;
 
     match storage_option {
         "keyring" => {
-            // Set to empty string to enable keyring (absence or empty = enabled)
-            config.set_param("A8E_DISABLE_KEYRING", Value::String("".to_string()))?;
-            cliclack::outro("Secret storage set to system keyring (secure)")?;
+            config.set_param("A8E_KEYRING", Value::Bool(true))?;
+            cliclack::outro("Secret storage set to system keyring")?;
             let _ =
                 cliclack::log::info("You may need to restart a8e for this change to take effect");
         }
         "file" => {
-            // Set the disable flag to use file storage
-            config.set_param("A8E_DISABLE_KEYRING", Value::String("true".to_string()))?;
+            config.set_param("A8E_KEYRING", Value::Bool(false))?;
             cliclack::outro(
-                "Secret storage set to file (~/.config/a8e/secrets.yaml). Keep this file secure!",
+                "Secret storage set to file (~/.config/a8e/secrets.yaml)",
             )?;
-            let _ =
-                cliclack::log::info("You may need to restart a8e for this change to take effect");
         }
         _ => unreachable!(),
     };

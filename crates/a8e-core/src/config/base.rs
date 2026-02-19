@@ -121,13 +121,14 @@ impl Default for Config {
 
         let config_path = config_dir.join(CONFIG_YAML_NAME);
 
-        let secrets = match env::var("A8E_DISABLE_KEYRING") {
-            Ok(_) => SecretStorage::File {
-                path: config_dir.join("secrets.yaml"),
-            },
-            Err(_) => SecretStorage::Keyring {
+        let secrets = if Self::should_use_keyring(&config_path) {
+            SecretStorage::Keyring {
                 service: KEYRING_SERVICE.to_string(),
-            },
+            }
+        } else {
+            SecretStorage::File {
+                path: config_dir.join("secrets.yaml"),
+            }
         };
         Config {
             config_path,
@@ -135,6 +136,41 @@ impl Default for Config {
             guard: Mutex::new(()),
             secrets_cache: Arc::new(Mutex::new(None)),
         }
+    }
+}
+
+impl Config {
+    /// Determine whether to use keyring based on env var and config file.
+    ///
+    /// Default is **file storage**. Keyring is used only when explicitly opted in
+    /// via `A8E_KEYRING=1` env var, or when the config file sets
+    /// `A8E_KEYRING: true`. The legacy `A8E_DISABLE_KEYRING` env var is also
+    /// respected: if set, keyring is never used regardless of other settings.
+    fn should_use_keyring(config_path: &Path) -> bool {
+        if env::var("A8E_DISABLE_KEYRING").is_ok() {
+            return false;
+        }
+
+        if let Ok(val) = env::var("A8E_KEYRING") {
+            return val == "1" || val.eq_ignore_ascii_case("true");
+        }
+
+        if let Ok(contents) = std::fs::read_to_string(config_path) {
+            if let Ok(mapping) = serde_yaml::from_str::<serde_yaml::Mapping>(&contents) {
+                if let Some(val) = mapping.get(&serde_yaml::Value::String(
+                    "A8E_KEYRING".to_string(),
+                )) {
+                    return val.as_bool().unwrap_or(false);
+                }
+                if let Some(val) = mapping.get(&serde_yaml::Value::String(
+                    "A8E_DISABLE_KEYRING".to_string(),
+                )) {
+                    return !val.as_bool().unwrap_or(false);
+                }
+            }
+        }
+
+        false
     }
 }
 
@@ -223,7 +259,11 @@ impl Config {
     /// This will initialize the configuration with the default path (~/.config/a8e/config.yaml)
     /// if it hasn't been initialized yet.
     pub fn global() -> &'static Config {
-        GLOBAL_CONFIG.get_or_init(Config::default)
+        GLOBAL_CONFIG.get_or_init(|| {
+            let config = Config::default();
+            config.migrate_secrets_from_keyring();
+            config
+        })
     }
 
     /// Create a new configuration instance with custom paths
@@ -958,6 +998,50 @@ impl Config {
             Ok(result) => Ok(result),
             Err(keyring_err) => self.handle_keyring_fallback_error(&keyring_err, fallback_values),
         }
+    }
+
+    /// One-time migration: if file storage is active but the secrets file
+    /// doesn't exist yet, try reading from the old keyring and copy secrets
+    /// to the file backend so users don't lose their API keys.
+    fn migrate_secrets_from_keyring(&self) {
+        let file_path = match &self.secrets {
+            SecretStorage::File { path } => path.clone(),
+            SecretStorage::Keyring { .. } => return,
+        };
+
+        if file_path.exists() {
+            return;
+        }
+
+        let entry = match Self::get_keyring_entry(KEYRING_SERVICE) {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+
+        let content = match entry.get_password() {
+            Ok(c) => c,
+            Err(_) => return,
+        };
+
+        let values: HashMap<String, Value> = match serde_json::from_str(&content) {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+
+        if values.is_empty() {
+            return;
+        }
+
+        if let Err(e) = self.write_secrets_to_file(&values) {
+            tracing::warn!("Failed to migrate secrets from keyring to file: {}", e);
+            return;
+        }
+
+        tracing::info!(
+            "Migrated {} secret(s) from system keyring to {}",
+            values.len(),
+            file_path.display()
+        );
     }
 }
 
