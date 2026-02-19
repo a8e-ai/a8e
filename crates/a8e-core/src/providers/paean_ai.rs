@@ -15,22 +15,21 @@ use crate::providers::formats::openai::create_request;
 use rmcp::model::Tool;
 
 const PAEAN_AI_PROVIDER_NAME: &str = "paean_ai";
-pub const PAEAN_AI_DEFAULT_MODEL: &str = "opensota/os-v1";
-pub const PAEAN_AI_DEFAULT_FAST_MODEL: &str = "opensota/os-v1-flash";
+pub const PAEAN_AI_DEFAULT_MODEL: &str = "GLM-4.5";
+pub const PAEAN_AI_DEFAULT_FAST_MODEL: &str = "GLM-4.5-Air";
 
 pub const PAEAN_AI_KNOWN_MODELS: &[&str] = &[
-    "opensota/os-v1",
-    "opensota/os-v1-pro",
-    "opensota/os-v1-mini",
-    "opensota/os-v1-flash",
-    "opensota/claude-sonnet",
-    "anthropic/claude-3-5-sonnet",
-    "openai/gpt-4o",
-    "openai/gpt-4o-mini",
-    "google/gemini-pro",
-    "deepseek/deepseek-v3.2-exp",
-    "moonshotai/kimi-k2",
-    "x-ai/grok-4",
+    // ZhipuAI GLM — optimised for coding tasks
+    "GLM-4.7",
+    "GLM-4.6",
+    "GLM-4.5",
+    "GLM-4.5-Air",
+    // Anthropic Claude via Google Vertex AI
+    "claude-sonnet-4-6",
+    "claude-opus-4-6",
+    // Google Gemini 3 Preview
+    "gemini-3-flash-preview",
+    "gemini-3-pro-preview",
 ];
 pub const PAEAN_AI_DOC_URL: &str = "https://api.paean.ai";
 
@@ -73,7 +72,7 @@ impl ProviderDef for PaeanAiProvider {
         ProviderMetadata::new(
             PAEAN_AI_PROVIDER_NAME,
             "Paean AI",
-            "AI gateway with multi-provider model routing",
+            "Curated coding models: GLM, Claude (Vertex), Gemini 3",
             PAEAN_AI_DEFAULT_MODEL,
             PAEAN_AI_KNOWN_MODELS.to_vec(),
             PAEAN_AI_DOC_URL,
