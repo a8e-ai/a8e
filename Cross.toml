@@ -19,28 +19,8 @@ pre-build = [
     """
 ]
 
-[target.x86_64-unknown-linux-gnu]
-xargo = false
-# gcc-10 (Ubuntu 20.04 default) has a memcmp bug (gcc.gnu.org/PR95189) that
-# aws-lc-sys explicitly rejects. Use gcc-11 from focal-updates instead.
-# nasm + cmake are required by aws-lc-sys for x86_64 assembly optimisations.
-pre-build = [
-    """\
-    apt-get update && apt-get install -y \
-     curl \
-     unzip \
-     pkg-config \
-     libssl-dev \
-     libdbus-1-dev \
-     libxcb1-dev \
-     gcc-11 \
-     nasm \
-     cmake
-    """
-]
-
-[target.x86_64-unknown-linux-gnu.env]
-set = { CC = "gcc-11", CXX = "g++-11" }
+# x86_64-unknown-linux-gnu is now built natively on ubuntu-latest (see build-cli.yml)
+# and no longer uses cross, so no cross config is needed for this target.
 
 [target.x86_64-pc-windows-gnu]
 image = "ghcr.io/cross-rs/x86_64-pc-windows-gnu:latest"
