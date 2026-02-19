@@ -1242,16 +1242,15 @@ pub fn display_session_info(
 
     if let Some(id) = session_id {
         println!(
-            "  {} {} {}",
-            style(" ").dim(),
+            "    {} {} {}",
             style(id).dim(),
-            style(format!("· {}", cwd_display)).dim(),
+            style("·").dim(),
+            style(&cwd_display).dim(),
         );
     } else {
         println!(
-            "  {} {}",
-            style(" ").dim(),
-            style(format!("  {}", cwd_display)).dim(),
+            "    {}",
+            style(&cwd_display).dim(),
         );
     }
 }
@@ -1267,16 +1266,28 @@ pub fn set_terminal_title() {
     // Sanitize: strip control characters (ESC, BEL, etc.) to prevent terminal escape injection
     let sanitized: String = dir_name.chars().filter(|c| !c.is_control()).collect();
     // OSC 0 sets the terminal window/tab title
-    print!("\x1b]0;🪿 {}\x07", sanitized);
+    print!("\x1b]0;∞ a8e · {}\x07", sanitized);
     let _ = std::io::stdout().flush();
 }
 
 pub fn display_greeting() {
     set_terminal_title();
+
+    let logo = [
+        r"      ___      ",
+        r" __ _( _ ) ___ ",
+        r"/ _` / _ \/ -_)",
+        r"\__,_\___/\___|",
+    ];
+
+    println!();
+    for line in &logo {
+        println!("  {}", style(*line).magenta().bold());
+    }
     println!(
-        "\n{} {}\n",
-        style("🪿 a8e").bold(),
-        style("ready — type a message to get started").dim()
+        "\n  {} {}\n",
+        style("∞").magenta().bold(),
+        style("type a message to get started · /help for commands").dim()
     );
 }
 

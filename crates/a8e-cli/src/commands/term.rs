@@ -52,7 +52,7 @@ fi{command_not_found_handler}"#,
         r#"
 
 command_not_found_handle() {
-    echo "🪿 Command '$1' not found. Asking a8e..."
+    echo "∞ Command '$1' not found. Asking a8e..."
     '{a8e_bin}' term run "$@"
     return 0
 }"#,
@@ -76,7 +76,7 @@ add-zsh-hook preexec a8e_preexec{command_not_found_handler}"#,
         r#"
 
 command_not_found_handler() {
-    echo "🪿 Command '$1' not found. Asking a8e..."
+    echo "∞ Command '$1' not found. Asking a8e..."
     '{a8e_bin}' term run "$@"
     return 0
 }"#,
@@ -98,7 +98,7 @@ end"#,
 
 static POWERSHELL_CONFIG: ShellConfig = ShellConfig {
     script_template: r#"$env:AGENT_SESSION_ID = "{session_id}"
-function @goose {{ & '{a8e_bin}' term run @args }}
+function @a8e {{ & '{a8e_bin}' term run @args }}
 function @g {{ & '{a8e_bin}' term run @args }}
 
 Set-PSReadLineKeyHandler -Chord Enter -ScriptBlock {{

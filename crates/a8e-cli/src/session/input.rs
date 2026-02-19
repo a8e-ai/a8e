@@ -399,11 +399,11 @@ fn parse_plan_command(input: String) -> Option<InputResult> {
 }
 
 fn get_input_prompt_string() -> String {
-    let goose = "🪿";
+    let icon = "∞";
     if cfg!(target_os = "windows") {
-        format!("{goose} ")
+        format!("{icon} ")
     } else {
-        format!("{} ", console::style(goose))
+        format!("{} ", console::style(icon).magenta().bold())
     }
 }
 
@@ -698,12 +698,12 @@ mod tests {
         // Prompt should always end with a space
         assert!(prompt.ends_with(' '));
 
-        // Prompt should contain the goose emoji
-        assert!(prompt.contains("🪿"));
+        // Prompt should contain the infinity symbol
+        assert!(prompt.contains("∞"));
 
         #[cfg(target_os = "windows")]
         {
-            assert_eq!(prompt, "🪿 ");
+            assert_eq!(prompt, "∞ ");
         }
     }
 }
