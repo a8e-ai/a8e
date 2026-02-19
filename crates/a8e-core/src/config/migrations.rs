@@ -216,7 +216,9 @@ mod tests {
         let dev_entry: ExtensionEntry = serde_yaml::from_value(dev_value.clone()).unwrap();
 
         assert!(dev_entry.enabled);
-        assert!(matches!(dev_entry.config, ExtensionConfig::Builtin { ref name, .. } if name == "developer"));
+        assert!(
+            matches!(dev_entry.config, ExtensionConfig::Builtin { ref name, .. } if name == "developer")
+        );
     }
 
     #[test]

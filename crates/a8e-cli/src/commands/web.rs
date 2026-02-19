@@ -266,7 +266,10 @@ pub async fn handle_web(
         .next()
         .ok_or_else(|| anyhow::anyhow!("Could not resolve address: {}", host))?;
 
-    println!("\n{} Starting a8e web server", console::style("∞").magenta().bold());
+    println!(
+        "\n{} Starting a8e web server",
+        console::style("∞").magenta().bold()
+    );
     println!("   Provider: {} | Model: {}", provider_name, model);
     println!(
         "   Working directory: {}",

@@ -1377,9 +1377,7 @@ pub fn configure_tool_output_dialog() -> anyhow::Result<()> {
 pub fn configure_keyring_dialog() -> anyhow::Result<()> {
     let config = Config::global();
 
-    let keyring_enabled = config
-        .get_param::<bool>("A8E_KEYRING")
-        .unwrap_or(false);
+    let keyring_enabled = config.get_param::<bool>("A8E_KEYRING").unwrap_or(false);
 
     let current_status = if keyring_enabled {
         "System Keyring"
@@ -1411,9 +1409,7 @@ pub fn configure_keyring_dialog() -> anyhow::Result<()> {
         }
         "file" => {
             config.set_param("A8E_KEYRING", Value::Bool(false))?;
-            cliclack::outro(
-                "Secret storage set to file (~/.config/a8e/secrets.yaml)",
-            )?;
+            cliclack::outro("Secret storage set to file (~/.config/a8e/secrets.yaml)")?;
         }
         _ => unreachable!(),
     };

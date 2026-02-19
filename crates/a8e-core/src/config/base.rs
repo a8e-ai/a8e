@@ -157,14 +157,13 @@ impl Config {
 
         if let Ok(contents) = std::fs::read_to_string(config_path) {
             if let Ok(mapping) = serde_yaml::from_str::<serde_yaml::Mapping>(&contents) {
-                if let Some(val) = mapping.get(&serde_yaml::Value::String(
-                    "A8E_KEYRING".to_string(),
-                )) {
+                if let Some(val) = mapping.get(serde_yaml::Value::String("A8E_KEYRING".to_string()))
+                {
                     return val.as_bool().unwrap_or(false);
                 }
-                if let Some(val) = mapping.get(&serde_yaml::Value::String(
-                    "A8E_DISABLE_KEYRING".to_string(),
-                )) {
+                if let Some(val) =
+                    mapping.get(serde_yaml::Value::String("A8E_DISABLE_KEYRING".to_string()))
+                {
                     return !val.as_bool().unwrap_or(false);
                 }
             }

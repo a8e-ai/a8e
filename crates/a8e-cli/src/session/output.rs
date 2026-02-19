@@ -1248,10 +1248,7 @@ pub fn display_session_info(
             style(&cwd_display).dim(),
         );
     } else {
-        println!(
-            "    {}",
-            style(&cwd_display).dim(),
-        );
+        println!("    {}", style(&cwd_display).dim(),);
     }
 }
 
