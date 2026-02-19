@@ -55,7 +55,7 @@ fn resolve_ollama_num_ctx(model_config: &ModelConfig) -> Option<usize> {
         Ok(_) => None,
         Err(crate::config::ConfigError::NotFound(_)) => None,
         Err(e) => {
-            tracing::warn!("Invalid GOOSE_INPUT_LIMIT value: {}", e);
+            tracing::warn!("Invalid A8E_INPUT_LIMIT value: {}", e);
             None
         }
     };
@@ -387,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_apply_ollama_options_uses_input_limit() {
-        let _guard = env_lock::lock_env([("GOOSE_INPUT_LIMIT", Some("8192"))]);
+        let _guard = env_lock::lock_env([("A8E_INPUT_LIMIT", Some("8192"))]);
         let model_config = ModelConfig::new("qwen3")
             .unwrap()
             .with_context_limit(Some(16_000));
@@ -398,7 +398,7 @@ mod tests {
 
     #[test]
     fn test_apply_ollama_options_falls_back_to_context_limit() {
-        let _guard = env_lock::lock_env([("GOOSE_INPUT_LIMIT", None::<&str>)]);
+        let _guard = env_lock::lock_env([("A8E_INPUT_LIMIT", None::<&str>)]);
         let model_config = ModelConfig::new("qwen3")
             .unwrap()
             .with_context_limit(Some(12_000));
@@ -409,7 +409,7 @@ mod tests {
 
     #[test]
     fn test_apply_ollama_options_skips_when_no_limit() {
-        let _guard = env_lock::lock_env([("GOOSE_INPUT_LIMIT", None::<&str>)]);
+        let _guard = env_lock::lock_env([("A8E_INPUT_LIMIT", None::<&str>)]);
         let mut model_config = ModelConfig::new("qwen3").unwrap();
         model_config.context_limit = None;
         let mut payload = json!({});

@@ -250,11 +250,11 @@ mod tests {
         expected_fallback: usize,
     ) {
         let _guard = env_lock::lock_env([
-            ("GOOSE_LEAD_MODEL", Some("gpt-4o")),
-            ("GOOSE_LEAD_PROVIDER", None),
-            ("GOOSE_LEAD_TURNS", lead_turns),
-            ("GOOSE_LEAD_FAILURE_THRESHOLD", failure_threshold),
-            ("GOOSE_LEAD_FALLBACK_TURNS", fallback_turns),
+            ("A8E_LEAD_MODEL", Some("gpt-4o")),
+            ("A8E_LEAD_PROVIDER", None),
+            ("A8E_LEAD_TURNS", lead_turns),
+            ("A8E_LEAD_FAILURE_THRESHOLD", failure_threshold),
+            ("A8E_LEAD_FALLBACK_TURNS", fallback_turns),
             ("OPENAI_API_KEY", Some("fake-openai-no-keyring")),
             ("OPENAI_CUSTOM_HEADERS", Some("")),
         ]);
@@ -279,11 +279,11 @@ mod tests {
     #[tokio::test]
     async fn test_create_regular_provider_without_lead_config() {
         let _guard = env_lock::lock_env([
-            ("GOOSE_LEAD_MODEL", None),
-            ("GOOSE_LEAD_PROVIDER", None),
-            ("GOOSE_LEAD_TURNS", None),
-            ("GOOSE_LEAD_FAILURE_THRESHOLD", None),
-            ("GOOSE_LEAD_FALLBACK_TURNS", None),
+            ("A8E_LEAD_MODEL", None),
+            ("A8E_LEAD_PROVIDER", None),
+            ("A8E_LEAD_TURNS", None),
+            ("A8E_LEAD_FAILURE_THRESHOLD", None),
+            ("A8E_LEAD_FALLBACK_TURNS", None),
             ("OPENAI_API_KEY", Some("fake-openai-no-keyring")),
             ("OPENAI_CUSTOM_HEADERS", Some("")),
         ]);
@@ -308,8 +308,8 @@ mod tests {
         expected_limit: usize,
     ) {
         let _guard = env_lock::lock_env([
-            ("GOOSE_WORKER_CONTEXT_LIMIT", worker_limit),
-            ("GOOSE_CONTEXT_LIMIT", global_limit),
+            ("A8E_WORKER_CONTEXT_LIMIT", worker_limit),
+            ("A8E_CONTEXT_LIMIT", global_limit),
         ]);
 
         let default_model = ModelConfig::new_or_fail("gpt-3.5-turbo")
