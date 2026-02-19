@@ -20,9 +20,9 @@ path = "src/bin/generate_manpages.rs"
 
 [dependencies]
 clap_mangen = "0.2.31"
-a8e-core = { path = "../a8e-core", version = "0.1.0" }
-a8e-acp = { path = "../a8e-acp", version = "0.1.0" }
-a8e-mcp = { path = "../a8e-mcp", version = "0.1.0" }
+a8e-core = { path = "../a8e-core" }
+a8e-acp = { path = "../a8e-acp" }
+a8e-mcp = { path = "../a8e-mcp" }
 rmcp = { workspace = true }
 clap = { workspace = true }
 cliclack = "0.3.5"
