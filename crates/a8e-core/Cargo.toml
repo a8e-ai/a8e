@@ -100,7 +100,7 @@ dashmap = "6.1"
 ahash = "0.8"
 tokio-util = { workspace = true, features = ["compat"] }
 unicode-normalization = "0.1"
-a8e-mcp = { path = "../a8e-mcp", version = "0.1.1" }
+a8e-mcp = { path = "../a8e-mcp", version = "0.1.2" }
 
 # For local Whisper transcription
 candle-core = { version = "0.9", default-features = false }
@@ -145,7 +145,7 @@ ctor = "0.2.9"
 test-case = { workspace = true }
 env-lock = { workspace = true }
 rmcp = { workspace = true, features = ["transport-streamable-http-server"] }
-a8e-test-support = { path = "../a8e-test-support", version = "0.1.1" }
+a8e-test-support = { path = "../a8e-test-support", version = "0.1.2" }
 
 [[example]]
 name = "agent"

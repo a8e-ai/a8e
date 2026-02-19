@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "a8e"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "a8e-acp",
  "a8e-core",
@@ -54,7 +54,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-acp"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "a8e-core",
  "a8e-mcp",
@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "a8e-mcp",
  "a8e-test-support",
@@ -184,7 +184,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-mcp"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -233,7 +233,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-server"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "a8e-core",
  "a8e-mcp",
@@ -279,7 +279,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-test"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "clap",
  "serde_json",
@@ -287,7 +287,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-test-support"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "axum 0.7.9",
  "rmcp 0.15.0",
