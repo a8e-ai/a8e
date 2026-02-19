@@ -15,22 +15,20 @@ use crate::providers::formats::openai::create_request;
 use rmcp::model::Tool;
 
 const PAEAN_AI_PROVIDER_NAME: &str = "paean_ai";
-pub const PAEAN_AI_DEFAULT_MODEL: &str = "anthropic/claude-sonnet-4";
-pub const PAEAN_AI_DEFAULT_FAST_MODEL: &str = "google/gemini-2.5-flash";
+pub const PAEAN_AI_DEFAULT_MODEL: &str = "opensota/os-v1";
+pub const PAEAN_AI_DEFAULT_FAST_MODEL: &str = "opensota/os-v1-flash";
 
 pub const PAEAN_AI_KNOWN_MODELS: &[&str] = &[
-    "anthropic/claude-sonnet-4.5",
-    "anthropic/claude-sonnet-4",
-    "anthropic/claude-opus-4.1",
-    "anthropic/claude-opus-4",
+    "opensota/os-v1",
+    "opensota/os-v1-pro",
+    "opensota/os-v1-mini",
+    "opensota/os-v1-flash",
+    "opensota/claude-sonnet",
+    "anthropic/claude-3-5-sonnet",
     "openai/gpt-4o",
     "openai/gpt-4o-mini",
-    "openai/o3",
-    "openai/o4-mini",
-    "google/gemini-2.5-pro",
-    "google/gemini-2.5-flash",
-    "deepseek/deepseek-r1-0528",
-    "qwen/qwen3-coder",
+    "google/gemini-pro",
+    "deepseek/deepseek-v3.2-exp",
     "moonshotai/kimi-k2",
     "x-ai/grok-4",
 ];
