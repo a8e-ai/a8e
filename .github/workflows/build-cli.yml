@@ -64,8 +64,16 @@ jobs:
           VERSION="${{ inputs.version }}"
           # Strip build metadata (+...) as Cargo doesn't support it in workspace version
           VERSION_CLEAN=$(echo "$VERSION" | sed 's/+.*//')
+          # Capture base version before modifying Cargo.toml
+          BASE_VERSION=$(grep '^version\s*=' Cargo.toml | head -n 1 | cut -d'"' -f2)
           sed -i.bak "s/^version = \".*\"/version = \"${VERSION_CLEAN}\"/" Cargo.toml
           rm -f Cargo.toml.bak
+          # Update inter-crate dependency version specs to match the canary version
+          # (Cargo requires prerelease versions to be specified explicitly)
+          for f in crates/*/Cargo.toml; do
+            sed -i.bak "s/version = \"${BASE_VERSION}\"/version = \"${VERSION_CLEAN}\"/g" "$f"
+            rm -f "${f}.bak"
+          done
 
       - name: Install cross (Linux)
         if: matrix.use-cross
