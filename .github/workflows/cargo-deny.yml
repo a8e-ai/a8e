@@ -18,7 +18,7 @@ on:
 jobs:
   deny:
     runs-on: ubuntu-latest
-    if: github.repository == 'block/goose'
+    if: github.repository == 'a8e-ai/a8e'
     permissions:
       contents: read
     steps:

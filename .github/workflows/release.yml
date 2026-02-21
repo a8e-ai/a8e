@@ -15,8 +15,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prepare-version:
+    name: Prepare Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - name: Extract version from tag
+        id: set-version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
   build-cli:
+    needs: [prepare-version]
     uses: ./.github/workflows/build-cli.yml
+    with:
+      version: ${{ needs.prepare-version.outputs.version }}
 
   install-script:
     name: Upload Install Script
