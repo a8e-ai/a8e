@@ -35,10 +35,44 @@ use std::path::PathBuf;
 use tracing::warn;
 
 #[derive(Parser)]
-#[command(name = "a8e", author, version, display_name = "", about, long_about = None)]
+#[command(
+    name = "a8e",
+    author,
+    version,
+    display_name = "",
+    about,
+    long_about = "Articulate (a8e) — the sovereign AI operator for your terminal.\n\n\
+        Run without arguments to start an interactive session.\n\
+        Pass a prompt directly to start with an initial message:\n\n  \
+        a8e \"write a hello world script\"\n  \
+        a8e \"explain this codebase\"\n\n\
+        Or use subcommands for more control:\n\n  \
+        a8e run --text \"do something\"   # headless (non-interactive)\n  \
+        a8e session                       # interactive session\n  \
+        a8e session \"start with this\"    # interactive with initial prompt"
+)]
 pub struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
+
+    /// Initial prompt — starts an interactive session with this message.
+    ///
+    /// Equivalent to: a8e session "<PROMPT>"
+    /// For headless (non-interactive) use: a8e run --text "<PROMPT>"
+    #[arg(
+        value_name = "PROMPT",
+        trailing_var_arg = true,
+        num_args = 0..,
+        help = "Start an interactive session with an initial prompt",
+        long_help = "Provide an initial prompt to send at session startup.\n\n\
+            Examples:\n  \
+            a8e \"write a hello world script\"\n  \
+            a8e explain this codebase\n  \
+            a8e --provider ollama \"summarize README\"\n\n\
+            For non-interactive / headless use:\n  \
+            a8e run --text \"do something\""
+    )]
+    prompt: Vec<String>,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -696,6 +730,10 @@ enum Command {
     /// Start or resume interactive chat sessions
     #[command(
         about = "Start or resume interactive chat sessions",
+        long_about = "Start or resume an interactive chat session.\n\n\
+            You can optionally pass a prompt directly to start the session with an initial message:\n\n  \
+            a8e session \"explain this codebase\"\n  \
+            a8e session write a hello world script",
         visible_alias = "s"
     )]
     Session {
@@ -736,6 +774,19 @@ enum Command {
 
         #[command(flatten)]
         extension_opts: ExtensionOptions,
+
+        /// Initial prompt to send at session start
+        #[arg(
+            value_name = "PROMPT",
+            trailing_var_arg = true,
+            num_args = 0..,
+            help = "Initial prompt to send at session start",
+            long_help = "Provide an initial message to the session on startup.\n\n\
+                Examples:\n  \
+                a8e session \"write a hello world script\"\n  \
+                a8e session explain this codebase"
+        )]
+        prompt: Vec<String>,
     },
 
     /// Open the last project directory
@@ -1055,6 +1106,7 @@ async fn handle_interactive_session(
     history: bool,
     session_opts: SessionOptions,
     extension_opts: ExtensionOptions,
+    initial_prompt: Option<String>,
 ) -> Result<()> {
     if get_telemetry_choice().is_none() {
         configure_telemetry_consent_dialog()?;
@@ -1126,7 +1178,7 @@ async fn handle_interactive_session(
         session.render_message_history();
     }
 
-    let result = session.interactive(None).await;
+    let result = session.interactive(initial_prompt).await;
     log_session_completion(&session, session_start, session_type, result.is_ok()).await;
     result
 }
@@ -1400,7 +1452,7 @@ async fn handle_term_subcommand(command: TermCommand) -> Result<()> {
     }
 }
 
-async fn handle_default_session() -> Result<()> {
+async fn handle_default_session(initial_prompt: Option<String>) -> Result<()> {
     if !Config::global().exists() {
         return handle_configure().await;
     }
@@ -1434,7 +1486,7 @@ async fn handle_default_session() -> Result<()> {
         container: None,
     })
     .await;
-    session.interactive(None).await
+    session.interactive(initial_prompt).await
 }
 
 pub async fn cli() -> anyhow::Result<()> {
@@ -1474,7 +1526,13 @@ pub async fn cli() -> anyhow::Result<()> {
             history,
             session_opts,
             extension_opts,
+            prompt,
         }) => {
+            let initial_prompt = if prompt.is_empty() {
+                None
+            } else {
+                Some(prompt.join(" "))
+            };
             handle_interactive_session(
                 identifier,
                 resume,
@@ -1482,6 +1540,7 @@ pub async fn cli() -> anyhow::Result<()> {
                 history,
                 session_opts,
                 extension_opts,
+                initial_prompt,
             )
             .await
         }
@@ -1543,6 +1602,13 @@ pub async fn cli() -> anyhow::Result<()> {
                 }
             }
         }
-        None => handle_default_session().await,
+        None => {
+            let initial_prompt = if cli.prompt.is_empty() {
+                None
+            } else {
+                Some(cli.prompt.join(" "))
+            };
+            handle_default_session(initial_prompt).await
+        }
     }
 }

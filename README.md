@@ -52,6 +52,10 @@ a8e configure
 
 # Start a session
 a8e session
+
+# Start with an initial prompt (interactive — stays open after the response)
+a8e "explain this codebase"
+a8e "write a hello world script in Go"
 ```
 
 ## CLI Usage
@@ -62,13 +66,26 @@ a8e session
  | (_| |/ _ \  __/   Speak Freely.
   \__,_| (_) \___|
 
-a8e <command>
+Usage: a8e [PROMPT]...
+       a8e <command>
+
+Arguments:
+  [PROMPT]...   Start an interactive session with an initial prompt
+                e.g. a8e "explain this codebase"
 
 Commands:
-  session     Start an interactive session
-  run         Run a single task
+  session     Start an interactive session (optionally with a prompt)
+  run         Run a single task (headless / non-interactive)
   configure   Configure providers, models, and extensions
   info        Show version and configuration
+
+Prompt input methods:
+  a8e "write a script"           # top-level prompt → interactive session
+  a8e session "write a script"   # same, via session subcommand
+  a8e run --text "write a script" # headless (exits after response)
+  a8e run -i instructions.txt    # headless from file
+  a8e run -i -                   # headless from stdin
+  echo "write a script" | a8e run -i -   # pipe into a8e
 ```
 
 ## Architecture
