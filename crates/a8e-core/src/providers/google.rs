@@ -30,6 +30,7 @@ pub const GOOGLE_KNOWN_MODELS: &[&str] = &[
     // Gemini 3 models
     "gemini-3-pro-preview",
     "gemini-3-pro-image-preview",
+    "gemini-3.1-flash-image-preview",
     // Gemini 2.5 Pro models
     "gemini-2.5-pro",
     "gemini-2.5-pro-preview-tts",

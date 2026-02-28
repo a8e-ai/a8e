@@ -323,6 +323,10 @@
     },
     {
       "provider": "google",
+      "model": "gemini-3.1-flash-image-preview"
+    },
+    {
+      "provider": "google",
       "model": "gemini-exp-1206"
     },
     {
