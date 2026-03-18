@@ -3,9 +3,7 @@ use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    if let Err(e) = a8e::logging::setup_logging(None) {
-        eprintln!("Warning: Failed to initialize logging: {}", e);
-    }
+    let _ = a8e::logging::setup_logging(None);
 
     let result = cli().await;
 

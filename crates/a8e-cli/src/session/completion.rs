@@ -119,30 +119,39 @@ impl GooseCompleter {
         Ok((line.len(), vec![]))
     }
 
-    /// Complete slash commands
+    /// Complete slash commands with descriptions
     fn complete_slash_commands(&self, line: &str) -> Result<(usize, Vec<Pair>)> {
-        // Define available slash commands
-        let commands = [
-            "/exit",
-            "/quit",
-            "/help",
-            "/?",
-            "/t",
-            "/extension",
-            "/builtin",
-            "/prompts",
-            "/prompt",
-            "/mode",
-            "/recipe",
+        let commands: &[(&str, &str, bool)] = &[
+            ("/help", "Show available commands", false),
+            (
+                "/mode",
+                "Set agent mode (auto, approve, chat, smart_approve)",
+                true,
+            ),
+            ("/plan", "Enter plan mode with optional message", true),
+            ("/endplan", "Exit plan mode", false),
+            ("/compact", "Compact conversation to reduce context", false),
+            ("/clear", "Clear chat history", false),
+            ("/recipe", "Generate recipe from conversation", true),
+            ("/prompt", "Execute or inspect a prompt", true),
+            ("/prompts", "List available prompts", true),
+            ("/extension", "Add a stdio extension", true),
+            ("/builtin", "Add builtin extensions by name", true),
+            ("/t", "Toggle or set theme (light, dark, ansi)", true),
+            ("/r", "Toggle full tool output display", false),
+            ("/exit", "Exit the session", false),
+            ("/quit", "Exit the session", false),
         ];
 
-        // Find commands that match the prefix
         let matching_commands: Vec<Pair> = commands
             .iter()
-            .filter(|cmd| cmd.starts_with(line))
-            .map(|cmd| Pair {
-                display: cmd.to_string(),
-                replacement: format!("{} ", cmd), // Add a space after the command
+            .filter(|(cmd, _, _)| cmd.starts_with(line))
+            .map(|(cmd, desc, needs_arg)| {
+                let suffix = if *needs_arg { " " } else { "" };
+                Pair {
+                    display: format!("{:<14} {}", cmd, desc),
+                    replacement: format!("{}{}", cmd, suffix),
+                }
             })
             .collect();
 
@@ -150,7 +159,6 @@ impl GooseCompleter {
             return Ok((0, matching_commands));
         }
 
-        // No command completions available
         Ok((line.len(), vec![]))
     }
 
@@ -398,19 +406,23 @@ impl Hinter for GooseCompleter {
         }
 
         if !line.is_empty() {
+            if line == "/" {
+                return Some(" Tab to see commands".to_string());
+            }
             return None;
         }
 
         match cache.hint_status {
             HintStatus::Interrupted => {
-                Some("Interrupted, what should a8e work on instead?".to_string())
+                Some("Interrupted — what should a8e work on instead?".to_string())
             }
-            HintStatus::MaybeExit => {
-                Some("Press Ctrl+C again to exit, or type new instructions to continue".to_string())
-            }
+            HintStatus::MaybeExit => Some("Ctrl+C again to exit · or type to continue".to_string()),
             HintStatus::Default => {
                 let newline_key = super::input::get_newline_key().to_ascii_uppercase();
-                Some(format!("Enter to send · Ctrl+{} newline", newline_key))
+                Some(format!(
+                    "Enter to send · Ctrl+{} newline · / for commands",
+                    newline_key
+                ))
             }
         }
     }
@@ -529,16 +541,15 @@ mod tests {
         let (pos, candidates) = completer.complete_slash_commands("/exit").unwrap();
         assert_eq!(pos, 0);
         assert_eq!(candidates.len(), 1);
-        assert_eq!(candidates[0].display, "/exit");
-        assert_eq!(candidates[0].replacement, "/exit ");
+        assert!(candidates[0].display.starts_with("/exit"));
+        assert_eq!(candidates[0].replacement, "/exit");
 
         // Test partial match
         let (pos, candidates) = completer.complete_slash_commands("/e").unwrap();
         assert_eq!(pos, 0);
-        // There might be multiple commands starting with "e" like "/exit" and "/extension"
         assert!(!candidates.is_empty());
 
-        // Test multiple matches
+        // Test multiple matches - all commands shown when just "/"
         let (pos, candidates) = completer.complete_slash_commands("/").unwrap();
         assert_eq!(pos, 0);
         assert!(candidates.len() > 1);

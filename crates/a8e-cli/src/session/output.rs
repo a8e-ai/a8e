@@ -408,10 +408,6 @@ pub fn render_exit_plan_mode() {
     println!("\n{}\n", style("Exiting plan mode.").green().bold());
 }
 
-pub fn goose_mode_message(text: &str) {
-    println!("\n{}", style(text).yellow(),);
-}
-
 static SHOW_THINKING: LazyLock<bool> = LazyLock::new(|| {
     std::env::var("GOOSE_CLI_SHOW_THINKING").is_ok() && std::io::stdout().is_terminal()
 });
@@ -497,7 +493,7 @@ fn render_tool_response(resp: &ToolResponse, theme: Theme, debug: bool) {
 }
 
 pub fn render_error(message: &str) {
-    println!("\n  {} {}\n", style("error:").red().bold(), message);
+    eprintln!("\n  {} {}\n", style("✘").red().bold(), style(message).red());
 }
 
 pub fn render_prompts(prompts: &HashMap<String, Vec<String>>) {
@@ -787,7 +783,7 @@ pub fn render_subagent_tool_call(
     }
     let tool_header = format!(
         "  {} {}",
-        style("▸").dim(),
+        style("▸").cyan().dim(),
         style(format_subagent_tool_call_message(subagent_id, tool_name)).dim(),
     );
     println!();
@@ -848,12 +844,16 @@ fn render_subagent_tool_graph(subagent_id: &str, tool_graph: &[Value]) {
 fn print_tool_header(call: &CallToolRequestParams) {
     let (tool, extension) = split_tool_name(&call.name);
     let tool_header = if extension.is_empty() {
-        format!("  {} {}", style("▸").dim(), style(&tool).dim())
+        format!(
+            "  {} {}",
+            style("▸").cyan().dim(),
+            style(&tool).dim().bold()
+        )
     } else {
         format!(
-            "  {} {} {}",
-            style("▸").dim(),
-            style(&tool).dim(),
+            "  {} {} · {}",
+            style("▸").cyan().dim(),
+            style(&tool).dim().bold(),
             style(extension).magenta().dim(),
         )
     };
@@ -1077,7 +1077,10 @@ fn print_value(value: &Value, debug: bool, reserve_width: usize) {
     let show_full = get_show_full_tool_output();
     let formatted = match value {
         Value::String(s) => match (max_width, debug || show_full) {
-            (Some(w), false) if s.len() > w => style(safe_truncate(s, w)),
+            (Some(w), false) if s.len() > w => {
+                let truncated = safe_truncate(s, w.saturating_sub(1));
+                style(format!("{}…", truncated))
+            }
             _ => style(s.to_string()),
         }
         .green(),
@@ -1207,12 +1210,12 @@ pub fn display_session_info(
     session_id: &Option<String>,
     provider_instance: Option<&Arc<dyn a8e_core::providers::base::Provider>>,
 ) {
-    let status = if resume {
-        "resuming"
+    let (status, status_color) = if resume {
+        ("resuming", Color::Yellow)
     } else if session_id.is_none() {
-        "ephemeral"
+        ("ephemeral", Color::Magenta)
     } else {
-        "new session"
+        ("started", Color::Green)
     };
 
     let model_display = if let Some(provider_inst) = provider_instance {
@@ -1228,8 +1231,8 @@ pub fn display_session_info(
 
     println!(
         "\n  {} {} {} {} {}",
-        style("●").green(),
-        style(status).dim(),
+        style("●").fg(status_color),
+        style(status).fg(status_color).dim(),
         style("·").dim(),
         style(provider).dim(),
         style(&model_display).cyan(),
@@ -1237,7 +1240,15 @@ pub fn display_session_info(
 
     let cwd_display = std::env::current_dir()
         .ok()
-        .map(|p| p.display().to_string())
+        .map(|p| {
+            let path_str = p.display().to_string();
+            if let Ok(home) = etcetera::home_dir() {
+                if let Ok(stripped) = p.strip_prefix(&home) {
+                    return format!("~/{}", stripped.display());
+                }
+            }
+            path_str
+        })
         .unwrap_or_else(|| "unknown".to_string());
 
     if let Some(id) = session_id {
@@ -1248,7 +1259,7 @@ pub fn display_session_info(
             style(&cwd_display).dim(),
         );
     } else {
-        println!("    {}", style(&cwd_display).dim(),);
+        println!("    {}", style(&cwd_display).dim());
     }
 }
 
@@ -1281,21 +1292,21 @@ pub fn display_greeting() {
     for line in &logo {
         println!("  {}", style(*line).magenta().bold());
     }
+    println!();
     println!(
-        "\n  {} {}\n",
+        "  {} {}  {}  {}",
         style("∞").magenta().bold(),
-        style("type a message to get started · /help for commands").dim()
+        style("Type a message to get started").dim(),
+        style("·").dim(),
+        style("/help for commands").dim()
     );
+    println!();
 }
 
 pub fn display_context_usage(total_tokens: usize, context_limit: usize) {
     use console::style;
 
     if context_limit == 0 {
-        println!(
-            "  {}",
-            style("context usage unavailable (context limit is 0)").dim()
-        );
         return;
     }
 
@@ -1306,13 +1317,13 @@ pub fn display_context_usage(total_tokens: usize, context_limit: usize) {
     let filled = ((percentage as f64 / 100.0) * bar_width as f64).round() as usize;
     let empty = bar_width - filled.min(bar_width);
 
-    let bar = format!("{}{}", "━".repeat(filled), "╌".repeat(empty));
+    let bar = format!("{}{}", "█".repeat(filled), "░".repeat(empty));
     let colored_bar = if percentage < 50 {
-        style(bar).green().dim()
+        style(&bar).green().dim()
     } else if percentage < 85 {
-        style(bar).yellow()
+        style(&bar).yellow()
     } else {
-        style(bar).red()
+        style(&bar).red()
     };
 
     fn format_tokens(n: usize) -> String {
@@ -1358,12 +1369,11 @@ fn estimate_cost_usd(
 pub fn display_cost_usage(provider: &str, model: &str, input_tokens: usize, output_tokens: usize) {
     if let Some(cost) = estimate_cost_usd(provider, model, input_tokens, output_tokens) {
         use console::style;
-        eprintln!(
-            "Cost: {} USD ({} tokens: in {}, out {})",
-            style(format!("${:.4}", cost)).cyan(),
-            input_tokens + output_tokens,
-            input_tokens,
-            output_tokens
+        println!(
+            "  {} {} {}",
+            style(format!("${:.4}", cost)).cyan().dim(),
+            style("·").dim(),
+            style(format!("{}+{} tokens", input_tokens, output_tokens)).dim(),
         );
     }
 }

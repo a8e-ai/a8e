@@ -259,8 +259,10 @@ fn handle_slash_command(input: &str) -> Option<InputResult> {
                 Some(InputResult::SelectTheme(t))
             } else {
                 println!(
-                    "Theme Unavailable: {} Available themes are: light, dark, ansi",
-                    t
+                    "  {} unknown theme '{}' — available: {}",
+                    console::style("✘").red(),
+                    console::style(&t).red(),
+                    console::style("light, dark, ansi").cyan()
                 );
                 Some(InputResult::Retry)
             }
@@ -304,7 +306,13 @@ fn handle_slash_command(input: &str) -> Option<InputResult> {
         s if s.starts_with(CMD_RECIPE) => parse_recipe_command(s),
         s if s == CMD_COMPACT => Some(InputResult::Compact),
         s if s == CMD_SUMMARIZE_DEPRECATED => {
-            println!("{}", console::style("⚠️  Note: /summarize has been renamed to /compact and will be removed in a future release.").yellow());
+            println!(
+                "  {} {}",
+                console::style("⚠").yellow(),
+                console::style("/summarize is deprecated — use /compact instead")
+                    .yellow()
+                    .dim()
+            );
             Some(InputResult::Compact)
         }
         "/r" => Some(InputResult::ToggleFullToolOutput),
@@ -327,9 +335,12 @@ fn parse_recipe_command(s: &str) -> Option<InputResult> {
         return Some(InputResult::Recipe(None));
     }
 
-    // Validate that the filepath ends with .yaml
     if !filepath.to_lowercase().ends_with(".yaml") {
-        println!("{}", console::style("Filepath must end with .yaml").red());
+        println!(
+            "  {} {}",
+            console::style("✘").red(),
+            console::style("Recipe filepath must end with .yaml").red()
+        );
         return Some(InputResult::Retry);
     }
 
@@ -409,34 +420,77 @@ fn get_input_prompt_string() -> String {
 
 fn print_help() {
     let newline_key = get_newline_key().to_ascii_uppercase();
-    println!(
-        "Available commands:
-/exit or /quit - Exit the session
-/t - Toggle Light/Dark/Ansi theme
-/t <name> - Set theme directly (light, dark, ansi)
-/r - Toggle full tool output display (show complete tool parameters without truncation)
-/extension <command> - Add a stdio extension (format: ENV1=val1 command args...)
-/builtin <names> - Add builtin extensions by name (comma-separated)
-/prompts [--extension <name>] - List all available prompts, optionally filtered by extension
-/prompt <n> [--info] [key=value...] - Get prompt info or execute a prompt
-/mode <name> - Set the a8e mode to use ('auto', 'approve', 'chat', 'smart_approve')
-/plan <message_text> -  Enters 'plan' mode with optional message. Create a plan based on the current messages and asks user if they want to act on it.
-                        If user acts on the plan, a8e mode is set to 'auto' and returns to 'normal' a8e mode.
-                        To warm up a8e before using '/plan', we recommend setting '/mode approve' & putting appropriate context into a8e.
-                        The model is used based on $A8E_PLANNER_PROVIDER and $A8E_PLANNER_MODEL environment variables.
-                        If no model is set, the default model is used.
-/endplan - Exit plan mode and return to 'normal' a8e mode.
-/recipe [filepath] - Generate a recipe from the current conversation and save it to the specified filepath (must end with .yaml).
-                       If no filepath is provided, it will be saved to ./recipe.yaml.
-/compact - Compact the current conversation to reduce context length while preserving key information.
-/? or /help - Display this help message
-/clear - Clears the current chat history
 
-Navigation:
-Ctrl+C - Clear current line if text is entered, otherwise exit the session
-Ctrl+{newline_key} - Add a newline (configurable via A8E_CLI_NEWLINE_KEY)
-Up/Down arrows - Navigate through command history"
-    );
+    println!();
+    println!("  {}", console::style("Commands").bold().underlined());
+    println!();
+
+    let commands: &[(&str, &str)] = &[
+        ("/help, /?", "Show this help message"),
+        (
+            "/mode <name>",
+            "Set mode: auto, approve, chat, smart_approve",
+        ),
+        (
+            "/plan [message]",
+            "Enter plan mode · create and act on plans",
+        ),
+        ("/endplan", "Exit plan mode"),
+        ("/compact", "Compact conversation to reduce context"),
+        ("/clear", "Clear chat history"),
+        (
+            "/recipe [path]",
+            "Generate recipe from conversation (.yaml)",
+        ),
+        (
+            "/prompt <n> [opts]",
+            "Execute or inspect a prompt (--info, key=val)",
+        ),
+        ("/prompts [--ext]", "List available prompts"),
+        (
+            "/extension <cmd>",
+            "Add stdio extension (ENV=val cmd args...)",
+        ),
+        (
+            "/builtin <names>",
+            "Add builtin extensions (comma-separated)",
+        ),
+        ("/t [theme]", "Toggle or set theme: light, dark, ansi"),
+        ("/r", "Toggle full tool output (no truncation)"),
+        ("/exit, /quit", "Exit the session"),
+    ];
+
+    for (cmd, desc) in commands {
+        println!(
+            "  {}  {}",
+            console::style(format!("{:<22}", cmd)).cyan(),
+            console::style(desc).dim()
+        );
+    }
+
+    println!();
+    println!("  {}", console::style("Navigation").bold().underlined());
+    println!();
+
+    let nav: &[(&str, &str)] = &[
+        ("Ctrl+C", "Clear line, or exit if empty"),
+        (
+            &format!("Ctrl+{}", newline_key),
+            "Insert newline (configurable via A8E_CLI_NEWLINE_KEY)",
+        ),
+        ("↑ / ↓", "Navigate command history"),
+        ("Tab", "Auto-complete commands and arguments"),
+    ];
+
+    for (key, desc) in nav {
+        println!(
+            "  {}  {}",
+            console::style(format!("{:<22}", key)).yellow(),
+            console::style(desc).dim()
+        );
+    }
+
+    println!();
 }
 
 /// Extract recent messages for editor context
@@ -450,14 +504,15 @@ fn extract_recent_messages(conversation_messages: Option<&Vec<String>>) -> Vec<S
     }
 }
 
-/// Print help information about editor input
 fn print_editor_help() {
+    println!("  {}", console::style("Editor").bold().underlined());
+    println!();
     println!(
-        "Editor Input:
-When a8e_prompt_editor is configured, prompts will open in your editor instead of the CLI.
-Previous conversation is included as markdown headings for context.
-Configure with: a8e configure set a8e_prompt_editor \"vim\""
+        "  {}  {}",
+        console::style(format!("{:<22}", "a8e_prompt_editor")).cyan(),
+        console::style("Open prompts in your editor (set via a8e configure)").dim()
     );
+    println!();
 }
 
 #[cfg(test)]

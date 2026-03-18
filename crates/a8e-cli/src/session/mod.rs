@@ -126,7 +126,7 @@ impl HistoryManager {
         if let Some(parent) = self.history_file.parent() {
             if !parent.exists() {
                 if let Err(e) = std::fs::create_dir_all(parent) {
-                    eprintln!("Warning: Failed to create history directory: {}", e);
+                    tracing::debug!("Failed to create history directory: {}", e);
                 }
             }
         }
@@ -134,7 +134,7 @@ impl HistoryManager {
         let history_files = [&self.history_file, &self.old_history_file];
         if let Some(file) = history_files.iter().find(|f| f.exists()) {
             if let Err(err) = editor.load_history(file) {
-                eprintln!("Warning: Failed to load command history: {}", err);
+                tracing::debug!("Failed to load command history: {}", err);
             }
         }
     }
@@ -144,10 +144,10 @@ impl HistoryManager {
         editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
     ) {
         if let Err(err) = editor.save_history(&self.history_file) {
-            eprintln!("Warning: Failed to save command history: {}", err);
+            tracing::debug!("Failed to save command history: {}", err);
         } else if self.old_history_file.exists() {
             if let Err(err) = std::fs::remove_file(&self.old_history_file) {
-                eprintln!("Warning: Failed to remove old history file: {}", err);
+                tracing::debug!("Failed to remove old history file: {}", err);
             }
         }
     }
@@ -504,9 +504,11 @@ impl CliSession {
         }
 
         println!(
-            "\n  {} {}",
+            "\n  {} {} {} {}",
             console::style("●").red(),
-            console::style(format!("session closed · {}", &self.session_id)).dim()
+            console::style("session closed").dim(),
+            console::style("·").dim(),
+            console::style(&self.session_id).dim()
         );
 
         Ok(())
@@ -622,10 +624,7 @@ impl CliSession {
                     Some(content),
                     Some(&self.session_id),
                 ) {
-                    eprintln!(
-                        "Warning: Failed to update project tracker with instruction: {}",
-                        e
-                    );
+                    tracing::debug!("Failed to update project tracker: {}", e);
                 }
 
                 let _provider = self.agent.provider().await?;
@@ -655,58 +654,51 @@ impl CliSession {
     fn handle_toggle_theme(&self) {
         let current = output::get_theme();
         let new_theme = match current {
-            output::Theme::Ansi => {
-                println!("Switching to Light theme");
-                output::Theme::Light
-            }
-            output::Theme::Light => {
-                println!("Switching to Dark theme");
-                output::Theme::Dark
-            }
-            output::Theme::Dark => {
-                println!("Switching to Ansi theme");
-                output::Theme::Ansi
-            }
+            output::Theme::Ansi => output::Theme::Light,
+            output::Theme::Light => output::Theme::Dark,
+            output::Theme::Dark => output::Theme::Ansi,
         };
         output::set_theme(new_theme);
+        let name = match new_theme {
+            output::Theme::Light => "light",
+            output::Theme::Dark => "dark",
+            output::Theme::Ansi => "ansi",
+        };
+        println!(
+            "  {} theme set to {}",
+            console::style("✓").green(),
+            console::style(name).cyan()
+        );
     }
 
     fn handle_select_theme(&self, theme_name: &str) {
         let new_theme = match theme_name {
-            "light" => {
-                println!("Switching to Light theme");
-                output::Theme::Light
-            }
-            "dark" => {
-                println!("Switching to Dark theme");
-                output::Theme::Dark
-            }
-            "ansi" => {
-                println!("Switching to Ansi theme");
-                output::Theme::Ansi
-            }
+            "light" => output::Theme::Light,
+            "dark" => output::Theme::Dark,
+            "ansi" => output::Theme::Ansi,
             _ => output::Theme::Dark,
         };
         output::set_theme(new_theme);
+        println!(
+            "  {} theme set to {}",
+            console::style("✓").green(),
+            console::style(theme_name).cyan()
+        );
     }
 
     fn handle_toggle_full_tool_output(&self) {
         let enabled = output::toggle_full_tool_output();
         if enabled {
             println!(
-                "{}",
-                console::style(
-                    "✓ Full tool output enabled - tool parameters will no longer be truncated"
-                )
-                .green()
+                "  {} {}",
+                console::style("✓").green(),
+                console::style("Full tool output enabled").green()
             );
         } else {
             println!(
-                "{}",
-                console::style(
-                    "✓ Full tool output disabled - tool parameters will be truncated to fit terminal width"
-                )
-                .dim()
+                "  {} {}",
+                console::style("✓").green(),
+                console::style("Tool output truncation enabled").dim()
             );
         }
     }
@@ -717,14 +709,18 @@ impl CliSession {
             Ok(mode) => mode,
             Err(_) => {
                 output::render_error(&format!(
-                    "Invalid mode '{}'. Mode must be one of: auto, approve, chat, smart_approve",
+                    "Unknown mode '{}' — available: auto, approve, chat, smart_approve",
                     mode
                 ));
                 return Ok(());
             }
         };
         config.set_a8e_mode(mode)?;
-        output::goose_mode_message(&format!("Articulate mode set to '{:?}'", mode));
+        println!(
+            "  {} mode set to {}",
+            console::style("✓").green(),
+            console::style(format!("{:?}", mode)).cyan()
+        );
         Ok(())
     }
 
@@ -1070,13 +1066,11 @@ impl CliSession {
                             cancel_token_clone.cancel();
                             drop(stream);
                             if let Err(e) = self.handle_interrupted_messages(false).await {
-                                eprintln!("Error handling interruption: {}", e);
+                                tracing::error!("Error handling interruption: {}", e);
                             } else if !is_stream_json_mode {
                                 output::render_error(
-                                    "The error above was an exception we were not able to handle.\n\
-                                    These errors are often related to connection or authentication\n\
-                                    We've removed the conversation up to the most recent user message\n\
-                                    - depending on the error you may be able to continue",
+                                    "An unrecoverable error occurred (likely connection or auth related).\n  \
+                                    Conversation rolled back to last user message — you may be able to continue.",
                                 );
                             }
                             break;
@@ -1087,7 +1081,7 @@ impl CliSession {
                 _ = cancel_token_clone.cancelled() => {
                     drop(stream);
                     if let Err(e) = self.handle_interrupted_messages(true).await {
-                        eprintln!("Error handling interruption: {}", e);
+                        tracing::error!("Error handling interruption: {}", e);
                     }
                     break;
                 }
@@ -1791,7 +1785,6 @@ fn log_tool_metrics(message: &Message, messages: &Conversation) {
     }
 }
 
-/// Handle and display an agent error
 fn handle_agent_error(e: &anyhow::Error, is_stream_json_mode: bool) {
     let error_msg = e.to_string();
 
@@ -1801,27 +1794,23 @@ fn handle_agent_error(e: &anyhow::Error, is_stream_json_mode: bool) {
         });
     }
 
-    if e.downcast_ref::<a8e_core::providers::errors::ProviderError>()
+    let is_context_exceeded = e
+        .downcast_ref::<a8e_core::providers::errors::ProviderError>()
         .map(|provider_error| {
             matches!(
                 provider_error,
                 a8e_core::providers::errors::ProviderError::ContextLengthExceeded(_)
             )
         })
-        .unwrap_or(false)
-    {
-        if !is_stream_json_mode {
-            output::render_text(
-                "Compaction requested. Should have happened in the agent!",
-                Some(Color::Yellow),
-                true,
-            );
-        }
-        warn!("Compaction requested. Should have happened in the agent!");
-    }
+        .unwrap_or(false);
 
-    if !is_stream_json_mode {
-        eprintln!("Error: {}", error_msg);
+    if is_context_exceeded {
+        warn!("Compaction requested. Should have happened in the agent!");
+        if !is_stream_json_mode {
+            output::render_error("Context length exceeded — automatic compaction failed.");
+        }
+    } else if !is_stream_json_mode {
+        output::render_error(&error_msg);
     }
 }
 
@@ -1831,21 +1820,19 @@ async fn get_reasoner() -> Result<Arc<dyn Provider>, anyhow::Error> {
 
     let config = Config::global();
 
-    // Try planner-specific provider first, fall back to default provider
     let provider = if let Ok(provider) = config.get_param::<String>("A8E_PLANNER_PROVIDER") {
         provider
     } else {
-        println!("WARNING: A8E_PLANNER_PROVIDER not found. Using default provider...");
+        tracing::debug!("A8E_PLANNER_PROVIDER not set, using default provider");
         config
             .get_a8e_provider()
             .expect("No provider configured. Run 'a8e configure' first")
     };
 
-    // Try planner-specific model first, fall back to default model
     let model = if let Ok(model) = config.get_param::<String>("A8E_PLANNER_MODEL") {
         model
     } else {
-        println!("WARNING: A8E_PLANNER_MODEL not found. Using default model...");
+        tracing::debug!("A8E_PLANNER_MODEL not set, using default model");
         config
             .get_a8e_model()
             .expect("No model configured. Run 'a8e configure' first")
