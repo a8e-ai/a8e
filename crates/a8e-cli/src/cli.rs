@@ -836,6 +836,49 @@ enum Command {
         command: SchedulerCommand,
     },
 
+    /// Start a gateway server (claw protocol) for remote agent access
+    #[command(
+        about = "Start a gateway server for remote agent access (claw protocol)",
+        long_about = "Start a lightweight HTTP gateway server that exposes the a8e agent\n\
+            via the claw protocol (SSE-streamed responses).\n\n\
+            Compatible with anyclaw, zeroclaw, 0claw, and any claw-protocol client.\n\
+            No account system required — uses optional bearer token auth.\n\n\
+            Endpoints:\n  \
+            POST /api/chat          SSE-streamed agent interaction\n  \
+            GET  /api/conversations  List conversations\n  \
+            GET  /api/messages       Get messages for a conversation\n  \
+            GET  /api/health         Health check"
+    )]
+    Gateway {
+        /// Port to run the gateway server on
+        #[arg(
+            short,
+            long,
+            default_value = "4776",
+            help = "Port to run the gateway server on"
+        )]
+        port: u16,
+
+        /// Host to bind the gateway server to
+        #[arg(
+            long,
+            default_value = "127.0.0.1",
+            help = "Host to bind the gateway server to"
+        )]
+        host: String,
+
+        /// Authentication token (Bearer token) for securing the gateway
+        #[arg(long, help = "Bearer token to secure the gateway endpoint")]
+        auth_token: Option<String>,
+
+        /// Allow running without authentication when exposed on the network (unsafe)
+        #[arg(
+            long,
+            help = "Skip auth requirement when exposed on the network (unsafe)"
+        )]
+        no_auth: bool,
+    },
+
     /// Update the a8e CLI version
     #[command(about = "Update the a8e CLI version")]
     Update {
@@ -1011,6 +1054,7 @@ fn get_command_name(command: &Option<Command>) -> &'static str {
         Some(Command::Projects) => "projects",
         Some(Command::Run { .. }) => "run",
         Some(Command::Schedule { .. }) => "schedule",
+        Some(Command::Gateway { .. }) => "gateway",
         Some(Command::Update { .. }) => "update",
         Some(Command::Recipe { .. }) => "recipe",
         Some(Command::Web { .. }) => "web",
@@ -1027,6 +1071,7 @@ async fn handle_mcp_command(server: McpCommand) -> Result<()> {
     match server {
         McpCommand::AutoVisualiser => serve(AutoVisualiserRouter::new()).await?,
         McpCommand::ComputerController => serve(ComputerControllerServer::new()).await?,
+        McpCommand::Cron => serve(a8e_mcp::CronServer::new()).await?,
         McpCommand::Memory => serve(MemoryServer::new()).await?,
         McpCommand::Tutorial => serve(TutorialServer::new()).await?,
         McpCommand::Developer => serve(DeveloperServer::new()).await?,
@@ -1573,6 +1618,12 @@ pub async fn cli() -> anyhow::Result<()> {
             .await
         }
         Some(Command::Schedule { command }) => handle_schedule_command(command).await,
+        Some(Command::Gateway {
+            port,
+            host,
+            auth_token,
+            no_auth,
+        }) => crate::commands::gateway::handle_gateway(port, host, auth_token, no_auth).await,
         Some(Command::Update {
             canary,
             reconfigure,

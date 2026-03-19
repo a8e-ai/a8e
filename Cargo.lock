@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "a8e"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "a8e-acp",
  "a8e-core",
@@ -40,6 +40,7 @@ dependencies = [
  "tempfile",
  "test-case",
  "tokio",
+ "tokio-stream",
  "tokio-util",
  "tower-http",
  "tracing",
@@ -54,7 +55,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-acp"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "a8e-core",
  "a8e-mcp",
@@ -89,7 +90,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-core"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "a8e-mcp",
  "a8e-test-support",
@@ -184,13 +185,14 @@ dependencies = [
 
 [[package]]
 name = "a8e-mcp"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
  "chrono",
  "docx-rs",
  "etcetera 0.11.0",
+ "hex",
  "ignore",
  "image 0.24.9",
  "include_dir",
@@ -200,6 +202,7 @@ dependencies = [
  "lru",
  "mpatch",
  "once_cell",
+ "rand 0.8.5",
  "rayon",
  "regex",
  "reqwest",
@@ -233,7 +236,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-server"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "a8e-core",
  "a8e-mcp",
@@ -279,7 +282,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-test"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "clap",
  "serde_json",
@@ -287,7 +290,7 @@ dependencies = [
 
 [[package]]
 name = "a8e-test-support"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "axum 0.7.9",
  "rmcp 0.15.0",

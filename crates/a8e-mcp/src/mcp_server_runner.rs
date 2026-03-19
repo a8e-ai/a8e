@@ -7,6 +7,7 @@ use rmcp::{transport::stdio, ServiceExt};
 pub enum McpCommand {
     AutoVisualiser,
     ComputerController,
+    Cron,
     Developer,
     Memory,
     Tutorial,
@@ -19,6 +20,7 @@ impl FromStr for McpCommand {
         match s.to_lowercase().replace(' ', "").as_str() {
             "autovisualiser" => Ok(McpCommand::AutoVisualiser),
             "computercontroller" => Ok(McpCommand::ComputerController),
+            "cron" => Ok(McpCommand::Cron),
             "developer" => Ok(McpCommand::Developer),
             "memory" => Ok(McpCommand::Memory),
             "tutorial" => Ok(McpCommand::Tutorial),
@@ -32,6 +34,7 @@ impl McpCommand {
         match self {
             McpCommand::AutoVisualiser => "autovisualiser",
             McpCommand::ComputerController => "computercontroller",
+            McpCommand::Cron => "cron",
             McpCommand::Developer => "developer",
             McpCommand::Memory => "memory",
             McpCommand::Tutorial => "tutorial",
