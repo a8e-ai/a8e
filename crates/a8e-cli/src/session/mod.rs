@@ -486,8 +486,8 @@ impl CliSession {
         let edit_mode = self.edit_mode;
 
         std::thread::spawn(move || {
-            let builder = rustyline::Config::builder()
-                .completion_type(rustyline::CompletionType::Circular);
+            let builder =
+                rustyline::Config::builder().completion_type(rustyline::CompletionType::Circular);
             let builder = match edit_mode {
                 Some(mode) => builder.edit_mode(mode),
                 None => builder.edit_mode(EditMode::Emacs),
@@ -496,8 +496,7 @@ impl CliSession {
             let Ok(mut editor) = rustyline::Editor::<
                 completion::A8eCompleter,
                 rustyline::history::DefaultHistory,
-            >::with_config(config)
-            else {
+            >::with_config(config) else {
                 return;
             };
             editor.set_helper(Some(completion::A8eCompleter::new(completion_cache)));

@@ -54,8 +54,8 @@ fn get_or_init_channel() -> &'static GlobalCronChannel {
 
 /// Take the global cron prompt receiver.  Call once from the session loop.
 /// Returns `None` if already taken.
-pub fn take_cron_prompt_receiver(
-) -> Option<tokio::sync::mpsc::UnboundedReceiver<CronPromptEvent>> {
+pub fn take_cron_prompt_receiver() -> Option<tokio::sync::mpsc::UnboundedReceiver<CronPromptEvent>>
+{
     get_or_init_channel().receiver.lock().unwrap().take()
 }
 
@@ -692,12 +692,7 @@ fn spawn_job_executor(
     });
 }
 
-async fn inject_prompt(
-    job_id: &str,
-    prompt: &str,
-    cwd: Option<&str>,
-    jobs: &JobRegistry,
-) {
+async fn inject_prompt(job_id: &str, prompt: &str, cwd: Option<&str>, jobs: &JobRegistry) {
     if is_agent_busy() {
         let mut reg = jobs.lock().await;
         if let Some(job) = reg.get_mut(job_id) {
