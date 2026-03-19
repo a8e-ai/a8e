@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use a8e_core::agents::{Agent, AgentEvent, GoosePlatform};
+use a8e_core::agents::{A8ePlatform, Agent, AgentEvent};
 use a8e_core::config::extensions::{set_extension, ExtensionEntry};
 use anyhow::Result;
 use futures::StreamExt;
@@ -15,7 +15,7 @@ mod tests {
         use a8e_core::agents::platform_tools::PLATFORM_MANAGE_SCHEDULE_TOOL_NAME;
         use a8e_core::agents::AgentConfig;
         use a8e_core::config::permission::PermissionManager;
-        use a8e_core::config::GooseMode;
+        use a8e_core::config::A8eMode;
         use a8e_core::scheduler::{ScheduledJob, SchedulerError};
         use a8e_core::scheduler_trait::SchedulerTrait;
         use a8e_core::session::{Session, SessionManager};
@@ -127,9 +127,9 @@ mod tests {
                 session_manager,
                 permission_manager,
                 Some(mock_scheduler),
-                GooseMode::Auto,
+                A8eMode::Auto,
                 false,
-                GoosePlatform::GooseCli,
+                A8ePlatform::Cli,
             );
             let agent = Agent::with_config(config);
 
@@ -169,9 +169,9 @@ mod tests {
                 session_manager,
                 permission_manager,
                 Some(mock_scheduler),
-                GooseMode::Auto,
+                A8eMode::Auto,
                 false,
-                GoosePlatform::GooseCli,
+                A8ePlatform::Cli,
             );
             let agent = Agent::with_config(config);
 
@@ -224,9 +224,9 @@ mod tests {
                 session_manager,
                 permission_manager,
                 Some(mock_scheduler),
-                GooseMode::Auto,
+                A8eMode::Auto,
                 false,
-                GoosePlatform::GooseCli,
+                A8ePlatform::Cli,
             );
             let agent = Agent::with_config(config);
 
@@ -506,7 +506,7 @@ mod tests {
         };
         use a8e_core::agents::AgentConfig;
         use a8e_core::config::permission::PermissionManager;
-        use a8e_core::config::GooseMode;
+        use a8e_core::config::A8eMode;
         use a8e_core::session::SessionManager;
 
         async fn setup_agent_with_extension_manager() -> (Agent, String) {
@@ -535,9 +535,9 @@ mod tests {
                 session_manager.clone(),
                 PermissionManager::instance(),
                 None,
-                GooseMode::Auto,
+                A8eMode::Auto,
                 false,
-                GoosePlatform::GooseCli,
+                A8ePlatform::Cli,
             );
 
             let agent = Agent::with_config(config);

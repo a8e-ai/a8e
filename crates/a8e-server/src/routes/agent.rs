@@ -3,7 +3,7 @@ use crate::routes::recipe_utils::{
     apply_recipe_to_agent, build_recipe_with_parameter_values, load_recipe_by_id, validate_recipe,
 };
 use crate::state::AppState;
-use a8e_core::a8e_apps::{fetch_mcp_apps, GooseApp, McpAppCache};
+use a8e_core::a8e_apps::{fetch_mcp_apps, A8eApp, McpAppCache};
 use a8e_core::agents::{Container, ExtensionLoadResult};
 use axum::response::IntoResponse;
 use axum::{
@@ -15,7 +15,7 @@ use axum::{
 
 use a8e_core::agents::ExtensionConfig;
 use a8e_core::config::resolve_extensions_for_new_session;
-use a8e_core::config::{Config, GooseMode};
+use a8e_core::config::{A8eMode, Config};
 use a8e_core::model::ModelConfig;
 use a8e_core::providers::create;
 use a8e_core::recipe::Recipe;
@@ -256,10 +256,10 @@ async fn start_agent(
         let mut update = manager.update(&session.id).recipe(Some(recipe.clone()));
 
         if let Some(ref settings) = recipe.settings {
-            if let Some(ref provider) = settings.goose_provider {
+            if let Some(ref provider) = settings.a8e_provider {
                 update = update.provider_name(provider);
 
-                if let Some(ref model) = settings.goose_model {
+                if let Some(ref model) = settings.a8e_model {
                     if let Ok(model_config) = ModelConfig::new(model) {
                         update = update.model_config(model_config);
                     }
@@ -475,7 +475,7 @@ async fn get_tools(
     Query(query): Query<GetToolsQuery>,
 ) -> Result<Json<Vec<ToolInfo>>, StatusCode> {
     let config = Config::global();
-    let goose_mode = config.get_a8e_mode().unwrap_or(GooseMode::Auto);
+    let a8e_mode = config.get_a8e_mode().unwrap_or(A8eMode::Auto);
     let session_id = query.session_id;
     let agent = state.get_agent_for_route(session_id.clone()).await?;
     let permission_manager = agent.config.permission_manager.clone();
@@ -488,9 +488,9 @@ async fn get_tools(
             let permission = permission_manager
                 .get_user_permission(&tool.name)
                 .or_else(|| {
-                    if goose_mode == GooseMode::SmartApprove {
+                    if a8e_mode == A8eMode::SmartApprove {
                         permission_manager.get_smart_approve_permission(&tool.name)
-                    } else if goose_mode == GooseMode::Approve {
+                    } else if a8e_mode == A8eMode::Approve {
                         Some(PermissionLevel::AskBefore)
                     } else {
                         None
@@ -984,7 +984,7 @@ pub struct ListAppsRequest {
 #[derive(Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ListAppsResponse {
-    pub apps: Vec<GooseApp>,
+    pub apps: Vec<A8eApp>,
 }
 
 #[utoipa::path(
@@ -1137,7 +1137,7 @@ async fn import_app(
         status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
 
-    let mut app = GooseApp::from_html(&body.html).map_err(|e| ErrorResponse {
+    let mut app = A8eApp::from_html(&body.html).map_err(|e| ErrorResponse {
         message: format!("Invalid Articulate App HTML: {}", e),
         status: StatusCode::BAD_REQUEST,
     })?;

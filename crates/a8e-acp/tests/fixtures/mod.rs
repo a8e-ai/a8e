@@ -1,9 +1,9 @@
 #![recursion_limit = "256"]
 #![allow(unused_attributes)]
 
-use a8e_acp::server::{serve, GooseAcpAgent};
+use a8e_acp::server::{serve, A8eAcpAgent};
 use a8e_core::builtin_extension::register_builtin_extensions;
-use a8e_core::config::{GooseMode, PermissionManager};
+use a8e_core::config::{A8eMode, PermissionManager};
 use a8e_core::providers::api_client::{ApiClient, AuthMethod};
 use a8e_core::providers::base::Provider;
 use a8e_core::providers::openai::OpenAiProvider;
@@ -172,9 +172,7 @@ pub type DuplexTransport = sacp::ByteStreams<
 /// Wires up duplex streams, spawns `serve` for the given agent, and returns
 /// a ready-to-use sacp transport plus the server handle.
 #[allow(dead_code)]
-pub async fn serve_agent_in_process(
-    agent: Arc<GooseAcpAgent>,
-) -> (DuplexTransport, JoinHandle<()>) {
+pub async fn serve_agent_in_process(agent: Arc<A8eAcpAgent>) -> (DuplexTransport, JoinHandle<()>) {
     let (client_read, server_write) = tokio::io::duplex(64 * 1024);
     let (server_read, client_write) = tokio::io::duplex(64 * 1024);
 
@@ -193,7 +191,7 @@ pub async fn spawn_acp_server_in_process(
     openai_base_url: &str,
     builtins: &[String],
     data_root: &Path,
-    goose_mode: GooseMode,
+    a8e_mode: A8eMode,
     provider_factory: Option<ProviderConstructor>,
 ) -> (DuplexTransport, JoinHandle<()>, Arc<PermissionManager>) {
     fs::create_dir_all(data_root).unwrap();
@@ -221,12 +219,12 @@ pub async fn spawn_acp_server_in_process(
     });
 
     let agent = Arc::new(
-        GooseAcpAgent::new(
+        A8eAcpAgent::new(
             provider_factory,
             builtins.to_vec(),
             data_root.to_path_buf(),
             data_root.to_path_buf(),
-            goose_mode,
+            a8e_mode,
             true,
         )
         .await
@@ -246,7 +244,7 @@ pub struct TestOutput {
 pub struct TestConnectionConfig {
     pub mcp_servers: Vec<McpServer>,
     pub builtins: Vec<String>,
-    pub goose_mode: GooseMode,
+    pub a8e_mode: A8eMode,
     pub data_root: PathBuf,
     pub provider_factory: Option<ProviderConstructor>,
 }
@@ -256,7 +254,7 @@ impl Default for TestConnectionConfig {
         Self {
             mcp_servers: Vec::new(),
             builtins: Vec::new(),
-            goose_mode: GooseMode::Auto,
+            a8e_mode: A8eMode::Auto,
             data_root: PathBuf::new(),
             provider_factory: None,
         }
@@ -313,7 +311,7 @@ where
 /// Connects to the given agent via in-process duplex streams, sends an
 /// `InitializeRequest`, and returns the response.
 #[allow(dead_code)]
-pub async fn initialize_agent(agent: Arc<GooseAcpAgent>) -> sacp::schema::InitializeResponse {
+pub async fn initialize_agent(agent: Arc<A8eAcpAgent>) -> sacp::schema::InitializeResponse {
     let (transport, _handle) = serve_agent_in_process(agent).await;
     sacp::ClientToAgent::builder()
         .connect_to(transport)

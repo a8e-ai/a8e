@@ -32,9 +32,9 @@ use console::Color;
 use a8e_core::agents::extension::{Envs, ExtensionConfig, PLATFORM_EXTENSIONS};
 use a8e_core::agents::types::RetryConfig;
 use a8e_core::agents::{Agent, SessionConfig, COMPACT_TRIGGERS};
-use a8e_core::config::{Config, GooseMode};
+use a8e_core::config::{A8eMode, Config};
 use anyhow::{Context, Result};
-use completion::GooseCompleter;
+use completion::A8eCompleter;
 use input::InputResult;
 use rmcp::model::PromptMessage;
 use rmcp::model::ServerNotification;
@@ -121,7 +121,7 @@ impl HistoryManager {
 
     fn load(
         &self,
-        editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+        editor: &mut rustyline::Editor<A8eCompleter, rustyline::history::DefaultHistory>,
     ) {
         if let Some(parent) = self.history_file.parent() {
             if !parent.exists() {
@@ -141,7 +141,7 @@ impl HistoryManager {
 
     fn save(
         &self,
-        editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+        editor: &mut rustyline::Editor<A8eCompleter, rustyline::history::DefaultHistory>,
     ) {
         if let Err(err) = editor.save_history(&self.history_file) {
             tracing::debug!("Failed to save command history: {}", err);
@@ -516,7 +516,7 @@ impl CliSession {
 
     fn create_editor(
         &self,
-    ) -> Result<rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>> {
+    ) -> Result<rustyline::Editor<A8eCompleter, rustyline::history::DefaultHistory>> {
         let builder =
             rustyline::Config::builder().completion_type(rustyline::CompletionType::Circular);
         let builder = match self.edit_mode {
@@ -525,10 +525,10 @@ impl CliSession {
         };
         let config = builder.build();
         let mut editor =
-            rustyline::Editor::<GooseCompleter, rustyline::history::DefaultHistory>::with_config(
+            rustyline::Editor::<A8eCompleter, rustyline::history::DefaultHistory>::with_config(
                 config,
             )?;
-        let completer = GooseCompleter::new(self.completion_cache.clone());
+        let completer = A8eCompleter::new(self.completion_cache.clone());
         editor.set_helper(Some(completer));
         Ok(editor)
     }
@@ -537,7 +537,7 @@ impl CliSession {
         &mut self,
         input: InputResult,
         history: &HistoryManager,
-        editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+        editor: &mut rustyline::Editor<A8eCompleter, rustyline::history::DefaultHistory>,
     ) -> Result<()> {
         match input {
             InputResult::Message(content) => {
@@ -578,9 +578,9 @@ impl CliSession {
                     Err(e) => output::render_error(&e.to_string()),
                 }
             }
-            InputResult::GooseMode(mode) => {
+            InputResult::A8eMode(mode) => {
                 history.save(editor);
-                self.handle_goose_mode(&mode)?;
+                self.handle_a8e_mode(&mode)?;
             }
             InputResult::Plan(options) => {
                 self.handle_plan_mode(options).await?;
@@ -613,7 +613,7 @@ impl CliSession {
         &mut self,
         content: &str,
         history: &HistoryManager,
-        editor: &mut rustyline::Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+        editor: &mut rustyline::Editor<A8eCompleter, rustyline::history::DefaultHistory>,
     ) -> Result<()> {
         match self.run_mode {
             RunMode::Normal => {
@@ -703,9 +703,9 @@ impl CliSession {
         }
     }
 
-    fn handle_goose_mode(&self, mode: &str) -> Result<()> {
+    fn handle_a8e_mode(&self, mode: &str) -> Result<()> {
         let config = Config::global();
-        let mode = match GooseMode::from_str(&mode.to_lowercase()) {
+        let mode = match A8eMode::from_str(&mode.to_lowercase()) {
             Ok(mode) => mode,
             Err(_) => {
                 output::render_error(&format!(
@@ -878,27 +878,22 @@ impl CliSession {
                 if should_act {
                     output::render_act_on_plan();
                     self.run_mode = RunMode::Normal;
-                    // set goose mode: auto if that isn't already the case
                     let config = Config::global();
-                    let curr_goose_mode = config.get_a8e_mode().unwrap_or(GooseMode::Auto);
-                    if curr_goose_mode != GooseMode::Auto {
-                        config.set_a8e_mode(GooseMode::Auto).unwrap();
+                    let curr_a8e_mode = config.get_a8e_mode().unwrap_or(A8eMode::Auto);
+                    if curr_a8e_mode != A8eMode::Auto {
+                        config.set_a8e_mode(A8eMode::Auto).unwrap();
                     }
 
-                    // clear the messages before acting on the plan
                     self.messages.clear();
-                    // add the plan response as a user message
                     let plan_message = Message::user().with_text(plan_response.as_concat_text());
                     self.push_message(plan_message);
-                    // act on the plan
                     output::show_thinking();
                     self.process_agent_response(true, CancellationToken::default())
                         .await?;
                     output::hide_thinking();
 
-                    // Reset run & goose mode
-                    if curr_goose_mode != GooseMode::Auto {
-                        config.set_a8e_mode(curr_goose_mode)?;
+                    if curr_a8e_mode != A8eMode::Auto {
+                        config.set_a8e_mode(curr_a8e_mode)?;
                     }
                 } else {
                     // add the plan response (assistant message) & carry the conversation forward
@@ -1292,7 +1287,7 @@ impl CliSession {
 
         let config = Config::global();
         let show_cost = config
-            .get_param::<bool>("GOOSE_CLI_SHOW_COST")
+            .get_param::<bool>("A8E_CLI_SHOW_COST")
             .unwrap_or(false);
 
         let provider_name = config
@@ -1655,7 +1650,7 @@ fn format_logging_notification(
                     Some("response_generated") => {
                         let config = Config::global();
                         let min_priority = config
-                            .get_param::<f32>("GOOSE_CLI_MIN_PRIORITY")
+                            .get_param::<f32>("A8E_CLI_MIN_PRIORITY")
                             .ok()
                             .unwrap_or(output::DEFAULT_MIN_PRIORITY);
 
@@ -1719,7 +1714,7 @@ fn display_log_notification(
         } else if ntype == "shell_output" {
             let config = Config::global();
             let min_priority = config
-                .get_param::<f32>("GOOSE_CLI_MIN_PRIORITY")
+                .get_param::<f32>("A8E_CLI_MIN_PRIORITY")
                 .ok()
                 .unwrap_or(output::DEFAULT_MIN_PRIORITY);
 
@@ -1745,7 +1740,7 @@ fn log_tool_metrics(message: &Message, messages: &Conversation) {
         if let MessageContent::ToolRequest(tool_request) = content {
             if let Ok(tool_call) = &tool_request.tool_call {
                 tracing::info!(
-                    monotonic_counter.goose.tool_calls = 1,
+                    monotonic_counter.a8e.tool_calls = 1,
                     tool_name = %tool_call.name,
                     "Tool call started"
                 );
@@ -1776,7 +1771,7 @@ fn log_tool_metrics(message: &Message, messages: &Conversation) {
                 "error"
             };
             tracing::info!(
-                monotonic_counter.goose.tool_completions = 1,
+                monotonic_counter.a8e.tool_completions = 1,
                 tool_name = %tool_name,
                 result = %result_status,
                 "Tool call completed"

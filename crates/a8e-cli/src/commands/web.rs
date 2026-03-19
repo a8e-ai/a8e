@@ -1,5 +1,5 @@
 use a8e_core::agents::{Agent, AgentEvent};
-use a8e_core::conversation::message::Message as GooseMessage;
+use a8e_core::conversation::message::Message as A8eMessage;
 use a8e_core::session::session_manager::SessionType;
 use anyhow::Result;
 use axum::response::Redirect;
@@ -545,7 +545,7 @@ async fn process_message_streaming(
 ) -> Result<()> {
     use a8e_core::agents::SessionConfig;
 
-    let user_message = GooseMessage::user().with_text(content.clone());
+    let user_message = A8eMessage::user().with_text(content.clone());
 
     let provider = agent.provider().await;
     if provider.is_err() {
@@ -625,7 +625,7 @@ async fn process_message_streaming(
 }
 
 async fn process_agent_message(
-    message: &GooseMessage,
+    message: &A8eMessage,
     sender: &Arc<Mutex<futures::stream::SplitSink<WebSocket, Message>>>,
     agent: &Agent,
 ) {

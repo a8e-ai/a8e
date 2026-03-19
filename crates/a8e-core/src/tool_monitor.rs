@@ -1,4 +1,4 @@
-use crate::config::GooseMode;
+use crate::config::A8eMode;
 use crate::conversation::message::{Message, ToolRequest};
 use crate::tool_inspection::{InspectionAction, InspectionResult, ToolInspector};
 use anyhow::Result;
@@ -100,7 +100,7 @@ impl ToolInspector for RepetitionInspector {
         &self,
         tool_requests: &[ToolRequest],
         _messages: &[Message],
-        _goose_mode: GooseMode,
+        _a8e_mode: A8eMode,
     ) -> Result<Vec<InspectionResult>> {
         let mut results = Vec::new();
 

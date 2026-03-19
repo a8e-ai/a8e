@@ -1,7 +1,7 @@
-use crate::agents::{Agent, AgentConfig, GoosePlatform};
+use crate::agents::{A8ePlatform, Agent, AgentConfig};
 use crate::config::paths::Paths;
 use crate::config::permission::PermissionManager;
-use crate::config::{Config, GooseMode};
+use crate::config::{A8eMode, Config};
 use crate::scheduler::Scheduler;
 use crate::scheduler_trait::SchedulerTrait;
 use crate::session::SessionManager;
@@ -82,7 +82,7 @@ impl AgentManager {
             }
         }
 
-        let mode = Config::global().get_a8e_mode().unwrap_or(GooseMode::Auto);
+        let mode = Config::global().get_a8e_mode().unwrap_or(A8eMode::Auto);
         let permission_manager = PermissionManager::instance();
         let config = AgentConfig::new(
             Arc::clone(&self.session_manager),
@@ -92,7 +92,7 @@ impl AgentManager {
             Config::global()
                 .get_a8e_disable_session_naming()
                 .unwrap_or(false),
-            GoosePlatform::GooseDesktop,
+            A8ePlatform::Desktop,
         );
         let agent = Arc::new(Agent::with_config(config));
         if let Some(provider) = &*self.default_provider.read().await {

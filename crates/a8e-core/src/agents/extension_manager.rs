@@ -34,7 +34,7 @@ use super::tool_execution::ToolCallResult;
 use super::types::SharedProvider;
 use crate::agents::extension::{Envs, ProcessExit};
 use crate::agents::extension_malware_check;
-use crate::agents::mcp_client::{GooseMcpClientCapabilities, McpClient, McpClientTrait};
+use crate::agents::mcp_client::{A8eMcpClientCapabilities, McpClient, McpClientTrait};
 use crate::builtin_extension::get_builtin_extension;
 use crate::config::extensions::name_to_key;
 use crate::config::search_path::SearchPaths;
@@ -228,7 +228,7 @@ async fn child_process_client(
     working_dir: Option<&PathBuf>,
     docker_container: Option<String>,
     client_name: String,
-    capabilities: GooseMcpClientCapabilities,
+    capabilities: A8eMcpClientCapabilities,
 ) -> ExtensionResult<McpClient> {
     configure_subprocess(&mut command);
 
@@ -395,7 +395,7 @@ async fn create_streamable_http_client(
     name: &str,
     provider: SharedProvider,
     client_name: String,
-    capabilities: GooseMcpClientCapabilities,
+    capabilities: A8eMcpClientCapabilities,
 ) -> ExtensionResult<Box<dyn McpClientTrait>> {
     let mut default_headers = HeaderMap::new();
 
@@ -558,7 +558,7 @@ impl ExtensionManager {
                     .iter()
                     .map(|(k, v)| (k.clone(), substitute_env_vars(v, &all_envs)))
                     .collect();
-                let capability = GooseMcpClientCapabilities {
+                let capability = A8eMcpClientCapabilities {
                     mcpui: self.capabilities.mcpui,
                 };
 
@@ -603,7 +603,7 @@ impl ExtensionManager {
                         .clone()
                         .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
-                    let capabilities = GooseMcpClientCapabilities {
+                    let capabilities = A8eMcpClientCapabilities {
                         mcpui: self.capabilities.mcpui,
                     };
 
@@ -625,7 +625,7 @@ impl ExtensionManager {
                     let (client_read, server_write) = tokio::io::duplex(65536);
                     extension_fn(server_read, server_write);
 
-                    let capabilities = GooseMcpClientCapabilities {
+                    let capabilities = A8eMcpClientCapabilities {
                         mcpui: self.capabilities.mcpui,
                     };
 
@@ -686,7 +686,7 @@ impl ExtensionManager {
                 let effective_working_dir = working_dir
                     .clone()
                     .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
-                let capabilities = GooseMcpClientCapabilities {
+                let capabilities = A8eMcpClientCapabilities {
                     mcpui: self.capabilities.mcpui,
                 };
                 let client = child_process_client(
@@ -737,7 +737,7 @@ impl ExtensionManager {
                     .clone()
                     .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
-                let capabilities = GooseMcpClientCapabilities {
+                let capabilities = A8eMcpClientCapabilities {
                     mcpui: self.capabilities.mcpui,
                 };
 

@@ -1,6 +1,6 @@
 use crate::agents::platform_extensions::MANAGE_EXTENSIONS_TOOL_NAME_COMPLETE;
 use crate::config::permission::PermissionLevel;
-use crate::config::{GooseMode, PermissionManager};
+use crate::config::{A8eMode, PermissionManager};
 use crate::conversation::message::{Message, ToolRequest};
 use crate::permission::permission_judge::PermissionCheckResult;
 use crate::tool_inspection::{InspectionAction, InspectionResult, ToolInspector};
@@ -107,7 +107,7 @@ impl ToolInspector for PermissionInspector {
         &self,
         tool_requests: &[ToolRequest],
         _messages: &[Message],
-        goose_mode: GooseMode,
+        a8e_mode: A8eMode,
     ) -> Result<Vec<InspectionResult>> {
         let mut results = Vec::new();
         let permission_manager = &self.permission_manager;
@@ -116,10 +116,10 @@ impl ToolInspector for PermissionInspector {
             if let Ok(tool_call) = &request.tool_call {
                 let tool_name = &tool_call.name;
 
-                let action = match goose_mode {
-                    GooseMode::Chat => continue,
-                    GooseMode::Auto => InspectionAction::Allow,
-                    GooseMode::Approve | GooseMode::SmartApprove => {
+                let action = match a8e_mode {
+                    A8eMode::Chat => continue,
+                    A8eMode::Auto => InspectionAction::Allow,
+                    A8eMode::Approve | A8eMode::SmartApprove => {
                         // 1. Check user-defined permission first
                         if let Some(level) = permission_manager.get_user_permission(tool_name) {
                             match level {
@@ -151,7 +151,7 @@ impl ToolInspector for PermissionInspector {
 
                 let reason = match &action {
                     InspectionAction::Allow => {
-                        if goose_mode == GooseMode::Auto {
+                        if a8e_mode == A8eMode::Auto {
                             "Auto mode - all tools approved".to_string()
                         } else if self.readonly_tools.contains(&**tool_name) {
                             "Tool marked as read-only".to_string()

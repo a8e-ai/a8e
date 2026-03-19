@@ -72,12 +72,12 @@ impl TlsConfig {
             }
             (Some(_), None) => {
                 return Err(anyhow::anyhow!(
-                    "Client certificate provided (GOOSE_CLIENT_CERT_PATH) but no private key (GOOSE_CLIENT_KEY_PATH)"
+                    "Client certificate provided (A8E_CLIENT_CERT_PATH) but no private key (A8E_CLIENT_KEY_PATH)"
                 ));
             }
             (None, Some(_)) => {
                 return Err(anyhow::anyhow!(
-                    "Client private key provided (GOOSE_CLIENT_KEY_PATH) but no certificate (GOOSE_CLIENT_CERT_PATH)"
+                    "Client private key provided (A8E_CLIENT_KEY_PATH) but no certificate (A8E_CLIENT_CERT_PATH)"
                 ));
             }
             (None, None) => {}

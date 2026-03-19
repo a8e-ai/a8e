@@ -17,7 +17,7 @@ pub struct WindowProps {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct GooseApp {
+pub struct A8eApp {
     #[serde(flatten)]
     pub resource: McpAppResource,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -28,7 +28,7 @@ pub struct GooseApp {
     pub prd: Option<String>,
 }
 
-impl GooseApp {
+impl A8eApp {
     const METADATA_SCRIPT_TYPE: &'static str = "application/ld+json";
     const PRD_SCRIPT_TYPE: &'static str = "application/x-a8e-prd";
     const A8E_APP_TYPE: &'static str = "ArticulateApp";
@@ -107,7 +107,7 @@ impl GooseApp {
         let clean_html = metadata_re.replace(html, "");
         let clean_html = prd_re.replace(&clean_html, "").to_string();
 
-        Ok(GooseApp {
+        Ok(A8eApp {
             resource: McpAppResource {
                 uri: format!("ui://apps/{}", name),
                 name,
@@ -209,7 +209,7 @@ impl GooseApp {
 pub async fn fetch_mcp_apps(
     extension_manager: &ExtensionManager,
     session_id: &str,
-) -> Result<Vec<GooseApp>, ErrorData> {
+) -> Result<Vec<A8eApp>, ErrorData> {
     let mut apps = Vec::new();
 
     let ui_resources = extension_manager.get_ui_resources(session_id).await?;
@@ -286,7 +286,7 @@ pub async fn fetch_mcp_apps(
                         })
                     };
 
-                    let app = GooseApp {
+                    let app = A8eApp {
                         resource: mcp_resource,
                         mcp_servers: vec![extension_name],
                         window_props,

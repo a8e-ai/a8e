@@ -1,5 +1,5 @@
 use a8e_core::agents::{Agent, AgentEvent, SessionConfig};
-use a8e_core::conversation::message::Message as GooseMessage;
+use a8e_core::conversation::message::Message;
 use a8e_core::session::session_manager::SessionType;
 use anyhow::Result;
 use axum::{
@@ -168,7 +168,7 @@ async fn process_chat(
         })
         .await;
 
-    let user_message = GooseMessage::user().with_text(&message);
+    let user_message = Message::user().with_text(&message);
 
     let session_config = SessionConfig {
         id: session.id.clone(),

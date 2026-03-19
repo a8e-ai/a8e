@@ -51,7 +51,7 @@ impl Connection for ClientToAgentConnection {
             openai.uri(),
             &config.builtins,
             data_root.as_path(),
-            config.goose_mode,
+            config.a8e_mode,
             config.provider_factory,
         )
         .await;

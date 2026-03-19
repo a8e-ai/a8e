@@ -104,7 +104,7 @@ pub trait McpClientTrait: Send + Sync {
     }
 }
 
-pub struct GooseClient {
+pub struct A8eClient {
     notification_handlers: Arc<Mutex<Vec<Sender<ServerNotification>>>>,
     provider: SharedProvider,
     /// Fallback session_id for server-initiated callbacks (e.g. sampling/createMessage)
@@ -112,17 +112,17 @@ pub struct GooseClient {
     /// Set once on first request; never cleared (the id is invariant per McpClient).
     session_id: Mutex<Option<String>>,
     client_name: String,
-    capabilities: GooseMcpClientCapabilities,
+    capabilities: A8eMcpClientCapabilities,
 }
 
-impl GooseClient {
+impl A8eClient {
     pub fn new(
         handlers: Arc<Mutex<Vec<Sender<ServerNotification>>>>,
         provider: SharedProvider,
         client_name: String,
-        capabilities: GooseMcpClientCapabilities,
+        capabilities: A8eMcpClientCapabilities,
     ) -> Self {
-        GooseClient {
+        A8eClient {
             notification_handlers: handlers,
             provider,
             session_id: Mutex::new(None),
@@ -160,7 +160,7 @@ impl GooseClient {
     }
 }
 
-impl ClientHandler for GooseClient {
+impl ClientHandler for A8eClient {
     async fn on_progress(
         &self,
         params: rmcp::model::ProgressNotificationParam,
@@ -366,13 +366,13 @@ impl ClientHandler for GooseClient {
 }
 
 #[derive(Debug, Clone)]
-pub struct GooseMcpClientCapabilities {
+pub struct A8eMcpClientCapabilities {
     pub mcpui: bool,
 }
 
 /// The MCP client is the interface for MCP operations.
 pub struct McpClient {
-    client: Mutex<RunningService<RoleClient, GooseClient>>,
+    client: Mutex<RunningService<RoleClient, A8eClient>>,
     notification_subscribers: Arc<Mutex<Vec<mpsc::Sender<ServerNotification>>>>,
     server_info: Option<InitializeResult>,
     timeout: std::time::Duration,
@@ -385,7 +385,7 @@ impl McpClient {
         timeout: std::time::Duration,
         provider: SharedProvider,
         client_name: String,
-        capabilities: GooseMcpClientCapabilities,
+        capabilities: A8eMcpClientCapabilities,
     ) -> Result<Self, ClientInitializeError>
     where
         T: IntoTransport<RoleClient, E, A>,
@@ -408,7 +408,7 @@ impl McpClient {
         provider: SharedProvider,
         docker_container: Option<String>,
         client_name: String,
-        capabilities: GooseMcpClientCapabilities,
+        capabilities: A8eMcpClientCapabilities,
     ) -> Result<Self, ClientInitializeError>
     where
         T: IntoTransport<RoleClient, E, A>,
@@ -417,13 +417,13 @@ impl McpClient {
         let notification_subscribers =
             Arc::new(Mutex::new(Vec::<mpsc::Sender<ServerNotification>>::new()));
 
-        let client = GooseClient::new(
+        let client = A8eClient::new(
             notification_subscribers.clone(),
             provider,
             client_name.clone(),
             capabilities.clone(),
         );
-        let client: rmcp::service::RunningService<rmcp::RoleClient, GooseClient> =
+        let client: rmcp::service::RunningService<rmcp::RoleClient, A8eClient> =
             client.serve(transport).await?;
         let server_info = client.peer_info().cloned();
 
@@ -760,17 +760,17 @@ fn inject_session_context_into_request(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agents::GoosePlatform;
+    use crate::agents::A8ePlatform;
     use serde_json::json;
     use test_case::test_case;
 
-    fn new_client(platform: GoosePlatform) -> GooseClient {
+    fn new_client(platform: A8ePlatform) -> A8eClient {
         let capabilities = match platform {
-            GoosePlatform::GooseDesktop => GooseMcpClientCapabilities { mcpui: true },
-            GoosePlatform::GooseCli => GooseMcpClientCapabilities { mcpui: false },
+            A8ePlatform::Desktop => A8eMcpClientCapabilities { mcpui: true },
+            A8ePlatform::Cli => A8eMcpClientCapabilities { mcpui: false },
         };
 
-        GooseClient::new(
+        A8eClient::new(
             Arc::new(Mutex::new(Vec::new())),
             Arc::new(Mutex::new(None)),
             platform.to_string(),
@@ -884,7 +884,7 @@ mod tests {
     ) {
         let runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async {
-            let client = new_client(GoosePlatform::GooseCli);
+            let client = new_client(A8ePlatform::Cli);
             if let Some(session_id) = current_session {
                 client.set_session_id(session_id).await;
             }
@@ -997,7 +997,7 @@ mod tests {
 
     #[test]
     fn test_client_info_advertises_mcp_apps_ui_extension() {
-        let client = new_client(GoosePlatform::GooseDesktop);
+        let client = new_client(A8ePlatform::Desktop);
         let info = ClientHandler::get_info(&client);
 
         // Verify the client advertises the MCP Apps UI extension capability

@@ -4,9 +4,9 @@
 
 #[path = "../fixtures/mod.rs"]
 pub mod fixtures;
-use a8e_acp::server::GooseAcpAgent;
+use a8e_acp::server::A8eAcpAgent;
 use a8e_core::config::base::CONFIG_YAML_NAME;
-use a8e_core::config::GooseMode;
+use a8e_core::config::A8eMode;
 use a8e_core::providers::provider_registry::ProviderConstructor;
 use a8e_test_support::{ExpectedSessionId, McpFixture, FAKE_CODE, TEST_MODEL};
 use fixtures::{
@@ -66,12 +66,12 @@ pub async fn run_initialize_without_provider() {
         Arc::new(|_, _| Box::pin(async { Err(anyhow::anyhow!("no provider configured")) }));
 
     let agent = Arc::new(
-        GooseAcpAgent::new(
+        A8eAcpAgent::new(
             provider_factory,
             vec![],
             temp_dir.path().to_path_buf(),
             temp_dir.path().to_path_buf(),
-            GooseMode::Auto,
+            A8eMode::Auto,
             false,
         )
         .await
@@ -261,7 +261,7 @@ pub async fn run_permission_persistence<C: Connection>() {
 
     let config = TestConnectionConfig {
         mcp_servers: vec![McpServer::Http(McpServerHttp::new("mcp-fixture", &mcp.url))],
-        goose_mode: GooseMode::Approve,
+        a8e_mode: A8eMode::Approve,
         data_root: temp_dir.path().to_path_buf(),
         ..Default::default()
     };

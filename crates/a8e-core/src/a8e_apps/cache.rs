@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use tracing::warn;
 
-use super::app::GooseApp;
+use super::app::A8eApp;
 
 static CLOCK_HTML: &str = include_str!("../a8e_apps/clock.html");
 const APPS_EXTENSION_NAME: &str = "apps";
@@ -24,7 +24,7 @@ impl McpAppCache {
 
     fn ensure_default_apps(&self) {
         if self.get_app(APPS_EXTENSION_NAME, "apps://clock").is_none() {
-            if let Ok(mut clock_app) = GooseApp::from_html(CLOCK_HTML) {
+            if let Ok(mut clock_app) = A8eApp::from_html(CLOCK_HTML) {
                 clock_app.mcp_servers = vec![APPS_EXTENSION_NAME.to_string()];
                 let _ = self.store_app(&clock_app);
             }
@@ -37,7 +37,7 @@ impl McpAppCache {
         format!("{}_{:x}", extension_name, hash)
     }
 
-    pub fn list_apps(&self) -> Result<Vec<GooseApp>, std::io::Error> {
+    pub fn list_apps(&self) -> Result<Vec<A8eApp>, std::io::Error> {
         let mut apps = Vec::new();
 
         if !self.cache_dir.exists() {
@@ -50,7 +50,7 @@ impl McpAppCache {
 
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 match fs::read_to_string(&path) {
-                    Ok(content) => match serde_json::from_str::<GooseApp>(&content) {
+                    Ok(content) => match serde_json::from_str::<A8eApp>(&content) {
                         Ok(app) => apps.push(app),
                         Err(e) => warn!("Failed to parse cached app from {:?}: {}", path, e),
                     },
@@ -62,7 +62,7 @@ impl McpAppCache {
         Ok(apps)
     }
 
-    pub fn store_app(&self, app: &GooseApp) -> Result<(), std::io::Error> {
+    pub fn store_app(&self, app: &A8eApp) -> Result<(), std::io::Error> {
         fs::create_dir_all(&self.cache_dir)?;
 
         // Store the app once for each MCP server it's associated with
@@ -76,7 +76,7 @@ impl McpAppCache {
         Ok(())
     }
 
-    pub fn get_app(&self, extension_name: &str, resource_uri: &str) -> Option<GooseApp> {
+    pub fn get_app(&self, extension_name: &str, resource_uri: &str) -> Option<A8eApp> {
         let cache_key = Self::cache_key(extension_name, resource_uri);
         let app_path = self.cache_dir.join(format!("{}.json", cache_key));
 
@@ -86,7 +86,7 @@ impl McpAppCache {
 
         fs::read_to_string(&app_path)
             .ok()
-            .and_then(|content| serde_json::from_str::<GooseApp>(&content).ok())
+            .and_then(|content| serde_json::from_str::<A8eApp>(&content).ok())
     }
 
     pub fn delete_extension_apps(&self, extension_name: &str) -> Result<usize, std::io::Error> {
@@ -102,7 +102,7 @@ impl McpAppCache {
 
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(app) = serde_json::from_str::<GooseApp>(&content) {
+                    if let Ok(app) = serde_json::from_str::<A8eApp>(&content) {
                         if app.mcp_servers.contains(&extension_name.to_string())
                             && fs::remove_file(&path).is_ok()
                         {

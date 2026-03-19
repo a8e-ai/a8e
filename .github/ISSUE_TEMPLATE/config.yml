@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: goose Discord discussion
-    url: https://discord.gg/goose-oss
+  - name: a8e Discussion
+    url: https://github.com/a8e-ai/a8e/discussions
     about: Please ask and answer questions here.
   - name: Report a security vulnerability
-    url: https://github.com/block/goose/security/policy
+    url: https://github.com/a8e-ai/a8e/security/policy
     about: Please report security vulnerabilities here.

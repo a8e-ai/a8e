@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use crate::agents::extension::ExtensionInfo;
 use crate::hints::load_hints::{load_hint_files, A8E_HINTS_FILENAME, AGENTS_MD_FILENAME};
 use crate::{
-    config::{Config, GooseMode},
+    config::{A8eMode, Config},
     prompt_template,
     utils::sanitize_unicode_tags,
 };
@@ -36,7 +36,7 @@ struct SystemPromptContext {
     current_date_time: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     extension_tool_limits: Option<(usize, usize)>,
-    goose_mode: GooseMode,
+    a8e_mode: A8eMode,
     is_autonomous: bool,
     enable_subagents: bool,
     max_extensions: usize,
@@ -142,7 +142,7 @@ impl<'a> SystemPromptBuilder<'a, PromptManager> {
             .collect();
 
         let config = Config::global();
-        let goose_mode = config.get_a8e_mode().unwrap_or(GooseMode::Auto);
+        let a8e_mode = config.get_a8e_mode().unwrap_or(A8eMode::Auto);
 
         let extension_tool_limits = self
             .extension_tool_count
@@ -152,8 +152,8 @@ impl<'a> SystemPromptBuilder<'a, PromptManager> {
             extensions: sanitized_extensions_info,
             current_date_time: self.manager.current_date_timestamp.clone(),
             extension_tool_limits,
-            goose_mode,
-            is_autonomous: goose_mode == GooseMode::Auto,
+            a8e_mode,
+            is_autonomous: a8e_mode == A8eMode::Auto,
             enable_subagents: self.subagents_enabled,
             max_extensions: MAX_EXTENSIONS,
             max_tools: MAX_TOOLS,
@@ -167,7 +167,7 @@ impl<'a> SystemPromptBuilder<'a, PromptManager> {
             prompt_template::render_template("system.md", &context)
         }
         .unwrap_or_else(|_| {
-            "You are a general-purpose AI agent called Articulate, created by Block".to_string()
+            "You are a general-purpose AI agent called Articulate (a8e). Speak freely, code locally.".to_string()
         });
 
         let mut system_prompt_extras = self.manager.system_prompt_extras.clone();
@@ -177,7 +177,7 @@ impl<'a> SystemPromptBuilder<'a, PromptManager> {
             system_prompt_extras.insert("hints".to_string(), hints);
         }
 
-        if goose_mode == GooseMode::Chat {
+        if a8e_mode == A8eMode::Chat {
             system_prompt_extras.insert(
                 "chat_mode".to_string(),
                 "Right now you are in the chat only mode, no access to any tool use and system."

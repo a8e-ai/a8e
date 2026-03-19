@@ -1,5 +1,5 @@
 use a8e_core::agents::extension::{Envs, PLATFORM_EXTENSIONS};
-use a8e_core::agents::{Agent, AgentConfig, ExtensionConfig, GoosePlatform, SessionConfig};
+use a8e_core::agents::{A8ePlatform, Agent, AgentConfig, ExtensionConfig, SessionConfig};
 use a8e_core::builtin_extension::register_builtin_extensions;
 use a8e_core::config::base::CONFIG_YAML_NAME;
 use a8e_core::config::extensions::get_enabled_extensions_with_config;
@@ -41,20 +41,20 @@ use url::Url;
 
 // Agent binds provider, extensions, and permission channels to a single session.
 // ACP has no session/close, so sessions accumulate until transport closes.
-struct GooseAcpSession {
+struct A8eAcpSession {
     agent: Arc<Agent>,
     messages: Conversation,
     tool_requests: HashMap<String, a8e_core::conversation::message::ToolRequest>,
     cancel_token: Option<CancellationToken>,
 }
 
-pub struct GooseAcpAgent {
-    sessions: Arc<Mutex<HashMap<String, GooseAcpSession>>>,
+pub struct A8eAcpAgent {
+    sessions: Arc<Mutex<HashMap<String, A8eAcpSession>>>,
     provider_factory: ProviderConstructor,
     config_dir: std::path::PathBuf,
     session_manager: Arc<SessionManager>,
     permission_manager: Arc<PermissionManager>,
-    goose_mode: a8e_core::config::GooseMode,
+    a8e_mode: a8e_core::config::A8eMode,
     disable_session_naming: bool,
     builtins: Vec<String>,
 }
@@ -290,7 +290,7 @@ async fn build_model_state(
     ))
 }
 
-impl GooseAcpAgent {
+impl A8eAcpAgent {
     pub fn permission_manager(&self) -> Arc<PermissionManager> {
         Arc::clone(&self.permission_manager)
     }
@@ -300,7 +300,7 @@ impl GooseAcpAgent {
         builtins: Vec<String>,
         data_dir: std::path::PathBuf,
         config_dir: std::path::PathBuf,
-        goose_mode: a8e_core::config::GooseMode,
+        a8e_mode: a8e_core::config::A8eMode,
         disable_session_naming: bool,
     ) -> Result<Self> {
         let session_manager = Arc::new(SessionManager::new(data_dir));
@@ -312,7 +312,7 @@ impl GooseAcpAgent {
             config_dir,
             session_manager,
             permission_manager,
-            goose_mode,
+            a8e_mode,
             disable_session_naming,
             builtins,
         })
@@ -323,9 +323,9 @@ impl GooseAcpAgent {
             Arc::clone(&self.session_manager),
             Arc::clone(&self.permission_manager),
             None,
-            self.goose_mode,
+            self.a8e_mode,
             self.disable_session_naming,
-            GoosePlatform::GooseCli,
+            A8ePlatform::Cli,
         ));
         let agent = Arc::new(agent);
 
@@ -379,7 +379,7 @@ impl GooseAcpAgent {
         &self,
         content_item: &MessageContent,
         session_id: &SessionId,
-        session: &mut GooseAcpSession,
+        session: &mut A8eAcpSession,
         cx: &JrConnectionCx<AgentToClient>,
     ) -> Result<(), sacp::Error> {
         match content_item {
@@ -435,7 +435,7 @@ impl GooseAcpAgent {
         &self,
         tool_request: &a8e_core::conversation::message::ToolRequest,
         session_id: &SessionId,
-        session: &mut GooseAcpSession,
+        session: &mut A8eAcpSession,
         cx: &JrConnectionCx<AgentToClient>,
     ) -> Result<(), sacp::Error> {
         session
@@ -465,7 +465,7 @@ impl GooseAcpAgent {
         &self,
         tool_response: &a8e_core::conversation::message::ToolResponse,
         session_id: &SessionId,
-        session: &mut GooseAcpSession,
+        session: &mut A8eAcpSession,
         cx: &JrConnectionCx<AgentToClient>,
     ) -> Result<(), sacp::Error> {
         let status = match &tool_response.tool_result {
@@ -642,7 +642,7 @@ fn build_tool_call_content(tool_result: &ToolResult<CallToolResult>) -> Vec<Tool
     }
 }
 
-impl GooseAcpAgent {
+impl A8eAcpAgent {
     async fn on_initialize(
         &self,
         args: InitializeRequest,
@@ -672,7 +672,7 @@ impl GooseAcpAgent {
     ) -> Result<NewSessionResponse, sacp::Error> {
         debug!(?args, "new session request");
 
-        let goose_session = self
+        let a8e_session = self
             .session_manager
             .create_session(
                 args.cwd.clone(),
@@ -686,7 +686,7 @@ impl GooseAcpAgent {
 
         let agent = self.create_agent_for_session().await;
         let provider = self
-            .init_provider(&agent, &goose_session)
+            .init_provider(&agent, &a8e_session)
             .await
             .map_err(|e| {
                 sacp::Error::internal_error().data(format!("Failed to set provider: {}", e))
@@ -700,13 +700,13 @@ impl GooseAcpAgent {
                 }
             };
             let name = config.name().to_string();
-            if let Err(e) = agent.add_extension(config, &goose_session.id).await {
+            if let Err(e) = agent.add_extension(config, &a8e_session.id).await {
                 return Err(sacp::Error::internal_error()
                     .data(format!("Failed to add MCP server '{}': {}", name, e)));
             }
         }
 
-        let session = GooseAcpSession {
+        let session = A8eAcpSession {
             agent,
             messages: Conversation::new_unvalidated(Vec::new()),
             tool_requests: HashMap::new(),
@@ -714,10 +714,10 @@ impl GooseAcpAgent {
         };
 
         let mut sessions = self.sessions.lock().await;
-        sessions.insert(goose_session.id.clone(), session);
+        sessions.insert(a8e_session.id.clone(), session);
 
         info!(
-            session_id = %goose_session.id,
+            session_id = %a8e_session.id,
             session_type = "acp",
             "Session started"
         );
@@ -725,7 +725,7 @@ impl GooseAcpAgent {
         let model_state =
             build_model_state(&*provider, &provider.get_model_config().model_name).await?;
 
-        Ok(NewSessionResponse::new(SessionId::new(goose_session.id)).models(model_state))
+        Ok(NewSessionResponse::new(SessionId::new(a8e_session.id)).models(model_state))
     }
 
     async fn init_provider(&self, agent: &Agent, session: &Session) -> Result<Arc<dyn Provider>> {
@@ -753,7 +753,7 @@ impl GooseAcpAgent {
 
         let session_id = args.session_id.0.to_string();
 
-        let goose_session = self
+        let a8e_session = self
             .session_manager
             .get_session(&session_id, true)
             .await
@@ -764,13 +764,13 @@ impl GooseAcpAgent {
 
         let agent = self.create_agent_for_session().await;
         let provider = self
-            .init_provider(&agent, &goose_session)
+            .init_provider(&agent, &a8e_session)
             .await
             .map_err(|e| {
                 sacp::Error::internal_error().data(format!("Failed to set provider: {}", e))
             })?;
 
-        let conversation = goose_session.conversation.ok_or_else(|| {
+        let conversation = a8e_session.conversation.ok_or_else(|| {
             sacp::Error::internal_error()
                 .data(format!("Session {} has no conversation data", session_id))
         })?;
@@ -785,7 +785,7 @@ impl GooseAcpAgent {
                     .data(format!("Failed to update session working directory: {}", e))
             })?;
 
-        let mut session = GooseAcpSession {
+        let mut session = A8eAcpSession {
             agent,
             messages: conversation.clone(),
             tool_requests: HashMap::new(),
@@ -991,11 +991,11 @@ impl GooseAcpAgent {
     }
 }
 
-pub struct GooseAcpHandler {
-    pub agent: Arc<GooseAcpAgent>,
+pub struct A8eAcpHandler {
+    pub agent: Arc<A8eAcpAgent>,
 }
 
-impl JrMessageHandler for GooseAcpHandler {
+impl JrMessageHandler for A8eAcpHandler {
     type Link = AgentToClient;
 
     fn describe_chain(&self) -> impl std::fmt::Debug {
@@ -1085,12 +1085,12 @@ impl JrMessageHandler for GooseAcpHandler {
     }
 }
 
-pub async fn serve<R, W>(agent: Arc<GooseAcpAgent>, read: R, write: W) -> Result<()>
+pub async fn serve<R, W>(agent: Arc<A8eAcpAgent>, read: R, write: W) -> Result<()>
 where
     R: futures::AsyncRead + Unpin + Send + 'static,
     W: futures::AsyncWrite + Unpin + Send + 'static,
 {
-    let handler = GooseAcpHandler { agent };
+    let handler = A8eAcpHandler { agent };
 
     AgentToClient::builder()
         .name("a8e-acp")

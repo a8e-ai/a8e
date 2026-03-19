@@ -1,5 +1,5 @@
 use a8e_core::agents::extension_manager::ExtensionManagerCapabilities;
-use a8e_core::agents::{ExtensionManager, GoosePlatform, PromptManager};
+use a8e_core::agents::{A8ePlatform, ExtensionManager, PromptManager};
 use a8e_core::config::ExtensionConfig;
 use a8e_core::conversation::message::{Message, MessageContent};
 use a8e_core::providers::anthropic::ANTHROPIC_DEFAULT_MODEL;
@@ -503,7 +503,7 @@ async fn test_provider(
     let extension_manager = Arc::new(ExtensionManager::new(
         shared_provider,
         session_manager,
-        GoosePlatform::GooseCli.to_string(),
+        A8ePlatform::Cli.to_string(),
         ExtensionManagerCapabilities { mcpui: false },
     ));
     extension_manager

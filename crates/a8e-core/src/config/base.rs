@@ -1,5 +1,5 @@
 use crate::config::paths::Paths;
-use crate::config::GooseMode;
+use crate::config::A8eMode;
 use fs2::FileExt;
 use keyring::Entry;
 use once_cell::sync::OnceCell;
@@ -1053,7 +1053,7 @@ config_value!(CODEX_ENABLE_SKILLS, String, "true");
 config_value!(CODEX_SKIP_GIT_CHECK, String, "false");
 
 config_value!(A8E_SEARCH_PATHS, Vec<String>);
-config_value!(A8E_MODE, GooseMode);
+config_value!(A8E_MODE, A8eMode);
 config_value!(A8E_PROVIDER, String);
 config_value!(A8E_MODEL, String);
 config_value!(A8E_PROMPT_EDITOR, Option<String>);

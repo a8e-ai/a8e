@@ -280,7 +280,7 @@ pub fn handle_projects_interactive() -> Result<()> {
         false
     };
 
-    // Build the command to run goose
+    // Build the command to run a8e
     let mut command = std::process::Command::new("a8e");
     command.arg("session");
 

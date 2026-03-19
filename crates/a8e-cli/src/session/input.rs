@@ -1,4 +1,4 @@
-use super::completion::GooseCompleter;
+use super::completion::A8eCompleter;
 use super::{CompletionCache, HintStatus};
 use a8e_core::config::Config;
 use anyhow::Result;
@@ -18,7 +18,7 @@ pub enum InputResult {
     Retry,
     ListPrompts(Option<String>),
     PromptCommand(PromptCommandOptions),
-    GooseMode(String),
+    A8eMode(String),
     Plan(PlanCommandOptions),
     EndPlan,
     Clear,
@@ -80,7 +80,7 @@ impl rustyline::ConditionalEventHandler for CtrlCHandler {
 
 pub fn get_newline_key() -> char {
     Config::global()
-        .get_param::<String>("GOOSE_CLI_NEWLINE_KEY")
+        .get_param::<String>("A8E_CLI_NEWLINE_KEY")
         .ok()
         .and_then(|s| s.chars().next())
         .map(|c| c.to_ascii_lowercase())
@@ -88,7 +88,7 @@ pub fn get_newline_key() -> char {
 }
 
 pub fn get_input(
-    editor: &mut Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+    editor: &mut Editor<A8eCompleter, rustyline::history::DefaultHistory>,
     conversation_messages: Option<&Vec<String>>,
 ) -> Result<InputResult> {
     let config = Config::global();
@@ -164,7 +164,7 @@ pub fn get_input(
 }
 
 fn get_regular_input(
-    editor: &mut Editor<GooseCompleter, rustyline::history::DefaultHistory>,
+    editor: &mut Editor<A8eCompleter, rustyline::history::DefaultHistory>,
 ) -> Result<InputResult> {
     let completion_cache = editor
         .helper()
@@ -295,7 +295,7 @@ fn handle_slash_command(input: &str) -> Option<InputResult> {
         s if s.starts_with(CMD_BUILTIN) => Some(InputResult::AddBuiltin(
             s.get(CMD_BUILTIN.len()..).unwrap_or("").to_string(),
         )),
-        s if s.starts_with(CMD_MODE) => Some(InputResult::GooseMode(
+        s if s.starts_with(CMD_MODE) => Some(InputResult::A8eMode(
             s.get(CMD_MODE.len()..).unwrap_or("").to_string(),
         )),
         s if s.starts_with(CMD_PLAN) => {

@@ -12,7 +12,7 @@ use tokio_util::sync::CancellationToken;
 
 use a8e_core::agents::extension::{Envs, ExtensionConfig};
 use a8e_core::agents::extension_manager::{ExtensionManager, ExtensionManagerCapabilities};
-use a8e_core::agents::GoosePlatform;
+use a8e_core::agents::A8ePlatform;
 use a8e_core::model::ModelConfig;
 
 use test_case::test_case;
@@ -200,7 +200,7 @@ async fn test_replayed_session(
     replay_file_path.push("mcp_replays");
     replay_file_path.push(&replay_file_name);
 
-    let mode = if env::var("GOOSE_RECORD_MCP").is_ok() {
+    let mode = if env::var("A8E_RECORD_MCP").is_ok() {
         TestMode::Record
     } else {
         assert!(replay_file_path.exists(), "replay file doesn't exist");
@@ -260,7 +260,7 @@ async fn test_replayed_session(
     let extension_manager = Arc::new(ExtensionManager::new(
         provider,
         session_manager,
-        GoosePlatform::GooseDesktop.to_string(),
+        A8ePlatform::Desktop.to_string(),
         ExtensionManagerCapabilities { mcpui: true },
     ));
 

@@ -580,7 +580,7 @@ derive_utoipa!(Icon as IconSchema);
         super::tunnel::TunnelInfo,
         super::tunnel::TunnelState,
         super::routes::telemetry::TelemetryEventRequest,
-        a8e_core::a8e_apps::GooseApp,
+        a8e_core::a8e_apps::A8eApp,
         a8e_core::a8e_apps::WindowProps,
         a8e_core::a8e_apps::McpAppResource,
         a8e_core::a8e_apps::CspMetadata,

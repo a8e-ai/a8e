@@ -21,7 +21,7 @@ use super::utils::filter_extensions_from_system_prompt;
 use crate::config::base::ClaudeCodeCommand;
 use crate::config::paths::Paths;
 use crate::config::search_path::SearchPaths;
-use crate::config::{Config, ExtensionConfig, GooseMode};
+use crate::config::{A8eMode, Config, ExtensionConfig};
 use crate::conversation::message::{Message, MessageContent};
 use crate::model::ModelConfig;
 use crate::subprocess::configure_subprocess;
@@ -284,16 +284,16 @@ impl ClaudeCodeProvider {
 
     fn apply_permission_flags(cmd: &mut Command) -> Result<(), ProviderError> {
         let config = Config::global();
-        let goose_mode = config.get_a8e_mode().unwrap_or(GooseMode::Auto);
+        let a8e_mode = config.get_a8e_mode().unwrap_or(A8eMode::Auto);
 
-        match goose_mode {
-            GooseMode::Auto => {
+        match a8e_mode {
+            A8eMode::Auto => {
                 cmd.arg("--dangerously-skip-permissions");
             }
-            GooseMode::SmartApprove => {
+            A8eMode::SmartApprove => {
                 cmd.arg("--permission-mode").arg("acceptEdits");
             }
-            GooseMode::Approve => {
+            A8eMode::Approve => {
                 return Err(ProviderError::RequestFailed(
                     "\n\n\n### NOTE\n\n\n \
                     Claude Code CLI provider does not support Approve mode.\n \
@@ -302,7 +302,7 @@ impl ClaudeCodeProvider {
                         .to_string(),
                 ));
             }
-            GooseMode::Chat => {}
+            A8eMode::Chat => {}
         }
         Ok(())
     }

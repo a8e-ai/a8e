@@ -172,7 +172,7 @@ async fn create_lead_worker_from_env(
     let lead_model_config = ModelConfig::new_with_context_env(
         lead_model_name.to_string(),
         &lead_provider_name,
-        Some("GOOSE_LEAD_CONTEXT_LIMIT"),
+        Some("A8E_LEAD_CONTEXT_LIMIT"),
     )?;
 
     let worker_model_config = create_worker_model_config(default_model, default_provider_name)?;

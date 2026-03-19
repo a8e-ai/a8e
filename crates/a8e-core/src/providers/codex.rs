@@ -18,7 +18,7 @@ use super::utils::{filter_extensions_from_system_prompt, RequestLog};
 use crate::config::base::{CodexCommand, CodexReasoningEffort, CodexSkipGitCheck};
 use crate::config::paths::Paths;
 use crate::config::search_path::SearchPaths;
-use crate::config::{Config, ExtensionConfig, GooseMode};
+use crate::config::{A8eMode, Config, ExtensionConfig};
 use crate::conversation::message::{Message, MessageContent};
 use crate::model::ModelConfig;
 use crate::subprocess::configure_subprocess;
@@ -69,25 +69,25 @@ impl CodexProvider {
         true
     }
 
-    /// Apply permission flags based on GOOSE_MODE setting
+    /// Apply permission flags based on A8E_MODE setting
     fn apply_permission_flags(cmd: &mut Command) -> Result<(), ProviderError> {
         let config = Config::global();
-        let goose_mode = config.get_a8e_mode().unwrap_or(GooseMode::Auto);
+        let a8e_mode = config.get_a8e_mode().unwrap_or(A8eMode::Auto);
 
-        match goose_mode {
-            GooseMode::Auto => {
+        match a8e_mode {
+            A8eMode::Auto => {
                 // --yolo is shorthand for --dangerously-bypass-approvals-and-sandbox
                 cmd.arg("--yolo");
             }
-            GooseMode::SmartApprove => {
+            A8eMode::SmartApprove => {
                 // --full-auto applies workspace-write sandbox and approvals only on failure
                 cmd.arg("--full-auto");
             }
-            GooseMode::Approve => {
+            A8eMode::Approve => {
                 // Default codex behavior - interactive approvals
                 // No special flags needed
             }
-            GooseMode::Chat => {
+            A8eMode::Chat => {
                 // Read-only sandbox mode
                 cmd.arg("--sandbox").arg("read-only");
             }
@@ -107,7 +107,7 @@ impl CodexProvider {
         std::fs::create_dir_all(&image_dir).ok();
         let (prompt, temp_files) = prepare_input(system, messages, &image_dir)?;
 
-        if std::env::var("GOOSE_CODEX_DEBUG").is_ok() {
+        if std::env::var("A8E_CODEX_DEBUG").is_ok() {
             println!("=== CODEX PROVIDER DEBUG ===");
             println!("Command: {:?}", self.command);
             println!("Model: {}", self.model.model_name);
@@ -133,7 +133,7 @@ impl CodexProvider {
         cmd.arg("exec");
 
         // Only pass model parameter if it's in the known models list
-        // This allows users to set GOOSE_PROVIDER=codex without needing to specify a model
+        // This allows users to set A8E_PROVIDER=codex without needing to specify a model
         if CODEX_KNOWN_MODELS.contains(&self.model.model_name.as_str()) {
             cmd.arg("-m").arg(&self.model.model_name);
         }
@@ -151,7 +151,7 @@ impl CodexProvider {
         // JSON output format for structured parsing
         cmd.arg("--json");
 
-        // Apply permission mode based on GOOSE_MODE
+        // Apply permission mode based on A8E_MODE
         Self::apply_permission_flags(&mut cmd)?;
 
         // Skip git repo check if configured

@@ -8,11 +8,11 @@ use crate::config::Config;
 /// system, which handles secure storage (e.g., keychain integration).
 
 #[derive(Clone)]
-pub struct GooseCredentialStore {
+pub struct A8eCredentialStore {
     name: String,
 }
 
-impl GooseCredentialStore {
+impl A8eCredentialStore {
     pub fn new(name: String) -> Self {
         Self { name }
     }
@@ -23,7 +23,7 @@ impl GooseCredentialStore {
 }
 
 #[async_trait::async_trait]
-impl CredentialStore for GooseCredentialStore {
+impl CredentialStore for A8eCredentialStore {
     async fn load(&self) -> Result<Option<StoredCredentials>, AuthError> {
         let config = Config::global();
         let key = self.secret_key();

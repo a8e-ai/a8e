@@ -104,8 +104,8 @@ mod tests {
 
         assert!(settings.is_some());
         let settings = settings.unwrap();
-        assert_eq!(settings.goose_provider, Some("test_provider".to_string()));
-        assert_eq!(settings.goose_model, Some("test_model".to_string()));
+        assert_eq!(settings.a8e_provider, Some("test_provider".to_string()));
+        assert_eq!(settings.a8e_model, Some("test_model".to_string()));
         assert_eq!(settings.temperature, Some(0.7));
 
         assert!(sub_recipes.is_some());
@@ -172,8 +172,8 @@ mod tests {
 
         assert!(settings.is_some());
         let settings = settings.unwrap();
-        assert_eq!(settings.goose_provider, Some("test_provider".to_string()));
-        assert_eq!(settings.goose_model, Some("test_model".to_string()));
+        assert_eq!(settings.a8e_provider, Some("test_provider".to_string()));
+        assert_eq!(settings.a8e_model, Some("test_model".to_string()));
         assert_eq!(settings.temperature, Some(0.7));
 
         assert!(sub_recipes.is_some());
@@ -233,8 +233,8 @@ parameters:
   input_type: string
   requirement: required
 settings:
-  goose_provider: test_provider
-  goose_model: test_model
+  a8e_provider: test_provider
+  a8e_model: test_model
   temperature: 0.7
 sub_recipes:
 - path: existing_sub_recipe.yaml

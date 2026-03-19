@@ -5,7 +5,7 @@ use super::openai_compatible::handle_status_openai_compat;
 use super::retry::ProviderRetry;
 use super::utils::{ImageFormat, RequestLog};
 use crate::config::declarative_providers::DeclarativeProviderConfig;
-use crate::config::GooseMode;
+use crate::config::A8eMode;
 use crate::conversation::message::Message;
 use crate::conversation::Conversation;
 use crate::model::ModelConfig;
@@ -248,8 +248,8 @@ impl Provider for OllamaProvider {
         tools: &[Tool],
     ) -> Result<MessageStream, ProviderError> {
         let config = crate::config::Config::global();
-        let goose_mode = config.get_a8e_mode().unwrap_or(GooseMode::Auto);
-        let filtered_tools = if goose_mode == GooseMode::Chat {
+        let a8e_mode = config.get_a8e_mode().unwrap_or(A8eMode::Auto);
+        let filtered_tools = if a8e_mode == A8eMode::Chat {
             &[]
         } else {
             tools

@@ -5,9 +5,9 @@ use crate::scenario_tests::message_generator::MessageGenerator;
 use crate::scenario_tests::mock_client::weather_client;
 use crate::scenario_tests::provider_configs::{get_provider_configs, ProviderConfig};
 use crate::session::CliSession;
-use a8e_core::agents::{Agent, AgentConfig, GoosePlatform};
+use a8e_core::agents::{A8ePlatform, Agent, AgentConfig};
 use a8e_core::config::permission::PermissionManager;
-use a8e_core::config::GooseMode;
+use a8e_core::config::A8eMode;
 use a8e_core::model::ModelConfig;
 use a8e_core::providers::{create, testprovider::TestProvider};
 use a8e_core::session::session_manager::SessionType;
@@ -212,9 +212,9 @@ where
         session_manager,
         permission_manager,
         None,
-        GooseMode::Auto,
+        A8eMode::Auto,
         true,
-        GoosePlatform::GooseCli,
+        A8ePlatform::Cli,
     );
     let agent = Agent::with_config(agent_config);
     agent

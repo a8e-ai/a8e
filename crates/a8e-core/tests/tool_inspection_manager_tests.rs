@@ -1,4 +1,4 @@
-use a8e_core::config::GooseMode;
+use a8e_core::config::A8eMode;
 use a8e_core::conversation::message::{Message, ToolRequest};
 use a8e_core::tool_inspection::{
     InspectionAction, InspectionResult, ToolInspectionManager, ToolInspector,
@@ -27,7 +27,7 @@ impl ToolInspector for MockInspectorOk {
         &self,
         _tool_requests: &[ToolRequest],
         _messages: &[Message],
-        _goose_mode: GooseMode,
+        _a8e_mode: A8eMode,
     ) -> Result<Vec<InspectionResult>> {
         Ok(self.results.clone())
     }
@@ -45,7 +45,7 @@ impl ToolInspector for MockInspectorErr {
         &self,
         _tool_requests: &[ToolRequest],
         _messages: &[Message],
-        _goose_mode: GooseMode,
+        _a8e_mode: A8eMode,
     ) -> Result<Vec<InspectionResult>> {
         Err(anyhow!("simulated failure"))
     }
@@ -86,7 +86,7 @@ async fn test_inspect_tools_aggregates_and_handles_errors() {
 
     // Act
     let results = manager
-        .inspect_tools(&tool_requests, &messages, GooseMode::Approve)
+        .inspect_tools(&tool_requests, &messages, A8eMode::Approve)
         .await
         .expect("inspect_tools should not fail when one inspector errors");
 

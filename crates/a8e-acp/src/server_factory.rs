@@ -3,7 +3,7 @@ use anyhow::Result;
 use std::sync::Arc;
 use tracing::info;
 
-use crate::server::GooseAcpAgent;
+use crate::server::A8eAcpAgent;
 
 pub struct AcpServerFactoryConfig {
     pub builtins: Vec<String>,
@@ -20,16 +20,16 @@ impl AcpServer {
         Self { config }
     }
 
-    pub async fn create_agent(&self) -> Result<Arc<GooseAcpAgent>> {
+    pub async fn create_agent(&self) -> Result<Arc<A8eAcpAgent>> {
         let config_path = self
             .config
             .config_dir
             .join(a8e_core::config::base::CONFIG_YAML_NAME);
         let config = a8e_core::config::Config::new(&config_path, "a8e")?;
 
-        let goose_mode = config
+        let a8e_mode = config
             .get_a8e_mode()
-            .unwrap_or(a8e_core::config::GooseMode::Auto);
+            .unwrap_or(a8e_core::config::A8eMode::Auto);
         let disable_session_naming = config.get_a8e_disable_session_naming().unwrap_or(false);
 
         let config_dir = self.config.config_dir.clone();
@@ -43,12 +43,12 @@ impl AcpServer {
             })
         });
 
-        let agent = GooseAcpAgent::new(
+        let agent = A8eAcpAgent::new(
             provider_factory,
             self.config.builtins.clone(),
             self.config.data_dir.clone(),
             self.config.config_dir.clone(),
-            goose_mode,
+            a8e_mode,
             disable_session_naming,
         )
         .await?;

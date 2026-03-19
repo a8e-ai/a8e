@@ -1,4 +1,4 @@
-use crate::recipes::github_recipe::GOOSE_RECIPE_GITHUB_REPO_CONFIG_KEY;
+use crate::recipes::github_recipe::A8E_RECIPE_GITHUB_REPO_CONFIG_KEY;
 use a8e_core::agents::extension::ToolInfo;
 use a8e_core::agents::extension_manager::get_parameter_names;
 use a8e_core::agents::Agent;
@@ -14,7 +14,7 @@ use a8e_core::config::paths::Paths;
 use a8e_core::config::permission::PermissionLevel;
 use a8e_core::config::signup_tetrate::TetrateAuth;
 use a8e_core::config::{
-    configure_tetrate, Config, ConfigError, ExperimentManager, ExtensionEntry, GooseMode,
+    configure_tetrate, A8eMode, Config, ConfigError, ExperimentManager, ExtensionEntry,
     PermissionManager,
 };
 use a8e_core::model::ModelConfig;
@@ -1194,7 +1194,7 @@ pub fn remove_extension_dialog() -> anyhow::Result<()> {
 
 pub async fn configure_settings_dialog() -> anyhow::Result<()> {
     let setting_type = cliclack::select("What setting would you like to configure?")
-        .item("goose_mode", "a8e mode", "Configure a8e mode")
+        .item("a8e_mode", "a8e mode", "Configure a8e mode")
         .item(
             "telemetry",
             "Telemetry",
@@ -1235,8 +1235,8 @@ pub async fn configure_settings_dialog() -> anyhow::Result<()> {
     let mut should_print_config_path = true;
 
     match setting_type {
-        "goose_mode" => {
-            configure_goose_mode_dialog()?;
+        "a8e_mode" => {
+            configure_a8e_mode_dialog()?;
         }
         "telemetry" => {
             configure_telemetry_dialog()?;
@@ -1271,7 +1271,7 @@ pub async fn configure_settings_dialog() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn configure_goose_mode_dialog() -> anyhow::Result<()> {
+pub fn configure_a8e_mode_dialog() -> anyhow::Result<()> {
     let config = Config::global();
 
     if std::env::var("A8E_MODE").is_ok() {
@@ -1280,22 +1280,22 @@ pub fn configure_goose_mode_dialog() -> anyhow::Result<()> {
 
     let mode = cliclack::select("Which a8e mode would you like to configure?")
         .item(
-            GooseMode::Auto,
+            A8eMode::Auto,
             "Auto Mode",
             "Full file modification, extension usage, edit, create and delete files freely"
         )
         .item(
-            GooseMode::Approve,
+            A8eMode::Approve,
             "Approve Mode",
             "All tools, extensions and file modifications will require human approval"
         )
         .item(
-            GooseMode::SmartApprove,
+            A8eMode::SmartApprove,
             "Smart Approve Mode",
             "Editing, creating, deleting files and using extensions will require human approval"
         )
         .item(
-            GooseMode::Chat,
+            A8eMode::Chat,
             "Chat Mode",
             "Engage with the selected provider without using tools, extensions, or file modification"
         )
@@ -1303,10 +1303,10 @@ pub fn configure_goose_mode_dialog() -> anyhow::Result<()> {
 
     config.set_a8e_mode(mode)?;
     let msg = match mode {
-        GooseMode::Auto => "Set to Auto Mode - full file modification enabled",
-        GooseMode::Approve => "Set to Approve Mode - all tools and modifications require approval",
-        GooseMode::SmartApprove => "Set to Smart Approve Mode - modifications require approval",
-        GooseMode::Chat => "Set to Chat Mode - no tools or modifications enabled",
+        A8eMode::Auto => "Set to Auto Mode - full file modification enabled",
+        A8eMode::Approve => "Set to Approve Mode - all tools and modifications require approval",
+        A8eMode::SmartApprove => "Set to Smart Approve Mode - modifications require approval",
+        A8eMode::Chat => "Set to Chat Mode - no tools or modifications enabled",
     };
     cliclack::outro(msg)?;
     Ok(())
@@ -1627,7 +1627,7 @@ pub async fn configure_tool_permissions_dialog() -> anyhow::Result<()> {
 }
 
 fn configure_recipe_dialog() -> anyhow::Result<()> {
-    let key_name = GOOSE_RECIPE_GITHUB_REPO_CONFIG_KEY;
+    let key_name = A8E_RECIPE_GITHUB_REPO_CONFIG_KEY;
     let config = Config::global();
     let default_recipe_repo = std::env::var(key_name)
         .ok()

@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-use crate::config::GooseMode;
+use crate::config::A8eMode;
 use crate::conversation::message::{Message, ToolRequest};
 use crate::permission::permission_inspector::PermissionInspector;
 use crate::permission::permission_judge::PermissionCheckResult;
@@ -40,7 +40,7 @@ pub trait ToolInspector: Send + Sync {
         &self,
         tool_requests: &[ToolRequest],
         messages: &[Message],
-        goose_mode: GooseMode,
+        a8e_mode: A8eMode,
     ) -> Result<Vec<InspectionResult>>;
 
     /// Whether this inspector is enabled
@@ -75,7 +75,7 @@ impl ToolInspectionManager {
         &self,
         tool_requests: &[ToolRequest],
         messages: &[Message],
-        goose_mode: GooseMode,
+        a8e_mode: A8eMode,
     ) -> Result<Vec<InspectionResult>> {
         let mut all_results = Vec::new();
 
@@ -90,7 +90,7 @@ impl ToolInspectionManager {
                 "Running tool inspector"
             );
 
-            match inspector.inspect(tool_requests, messages, goose_mode).await {
+            match inspector.inspect(tool_requests, messages, a8e_mode).await {
                 Ok(results) => {
                     tracing::debug!(
                         inspector_name = inspector.name(),

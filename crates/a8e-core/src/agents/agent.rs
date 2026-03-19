@@ -25,7 +25,7 @@ use crate::agents::prompt_manager::PromptManager;
 use crate::agents::retry::{RetryManager, RetryResult};
 use crate::agents::types::{FrontendTool, SessionConfig, SharedProvider, ToolResultReceiver};
 use crate::config::permission::PermissionManager;
-use crate::config::{get_enabled_extensions, Config, GooseMode};
+use crate::config::{get_enabled_extensions, A8eMode, Config};
 use crate::context_mgmt::{
     check_if_compaction_needed, compact_messages, DEFAULT_COMPACTION_THRESHOLD,
 };
@@ -68,7 +68,7 @@ pub struct ReplyContext {
     pub tools: Vec<Tool>,
     pub toolshim_tools: Vec<Tool>,
     pub system_prompt: String,
-    pub goose_mode: GooseMode,
+    pub a8e_mode: A8eMode,
     pub tool_call_cut_off: usize,
     pub initial_messages: Vec<Message>,
 }
@@ -88,16 +88,16 @@ pub struct ExtensionLoadResult {
 }
 
 #[derive(Clone, Debug)]
-pub enum GoosePlatform {
-    GooseDesktop,
-    GooseCli,
+pub enum A8ePlatform {
+    Desktop,
+    Cli,
 }
 
-impl fmt::Display for GoosePlatform {
+impl fmt::Display for A8ePlatform {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            GoosePlatform::GooseCli => write!(f, "a8e-cli"),
-            GoosePlatform::GooseDesktop => write!(f, "a8e-desktop"),
+            A8ePlatform::Cli => write!(f, "a8e-cli"),
+            A8ePlatform::Desktop => write!(f, "a8e-desktop"),
         }
     }
 }
@@ -107,9 +107,9 @@ pub struct AgentConfig {
     pub session_manager: Arc<SessionManager>,
     pub permission_manager: Arc<PermissionManager>,
     pub scheduler_service: Option<Arc<dyn SchedulerTrait>>,
-    pub goose_mode: GooseMode,
+    pub a8e_mode: A8eMode,
     pub disable_session_naming: bool,
-    pub goose_platform: GoosePlatform,
+    pub a8e_platform: A8ePlatform,
 }
 
 impl AgentConfig {
@@ -117,17 +117,17 @@ impl AgentConfig {
         session_manager: Arc<SessionManager>,
         permission_manager: Arc<PermissionManager>,
         scheduler_service: Option<Arc<dyn SchedulerTrait>>,
-        goose_mode: GooseMode,
+        a8e_mode: A8eMode,
         disable_session_naming: bool,
-        goose_platform: GoosePlatform,
+        a8e_platform: A8ePlatform,
     ) -> Self {
         Self {
             session_manager,
             permission_manager,
             scheduler_service,
-            goose_mode,
+            a8e_mode,
             disable_session_naming,
-            goose_platform,
+            a8e_platform,
         }
     }
 }
@@ -207,11 +207,11 @@ impl Agent {
             Arc::new(SessionManager::instance()),
             PermissionManager::instance(),
             None,
-            Config::global().get_a8e_mode().unwrap_or(GooseMode::Auto),
+            Config::global().get_a8e_mode().unwrap_or(A8eMode::Auto),
             Config::global()
                 .get_a8e_disable_session_naming()
                 .unwrap_or(false),
-            GoosePlatform::GooseCli,
+            A8ePlatform::Cli,
         ))
     }
 
@@ -221,10 +221,10 @@ impl Agent {
         let (tool_tx, tool_rx) = mpsc::channel(32);
         let provider = Arc::new(Mutex::new(None));
 
-        let goose_platform = config.goose_platform.clone();
-        let capabilities = match config.goose_platform {
-            GoosePlatform::GooseDesktop => ExtensionManagerCapabilities { mcpui: true },
-            GoosePlatform::GooseCli => ExtensionManagerCapabilities { mcpui: false },
+        let a8e_platform = config.a8e_platform.clone();
+        let capabilities = match config.a8e_platform {
+            A8ePlatform::Desktop => ExtensionManagerCapabilities { mcpui: true },
+            A8ePlatform::Cli => ExtensionManagerCapabilities { mcpui: false },
         };
         let session_manager = Arc::clone(&config.session_manager);
         let permission_manager = Arc::clone(&config.permission_manager);
@@ -234,7 +234,7 @@ impl Agent {
             extension_manager: Arc::new(ExtensionManager::new(
                 provider.clone(),
                 session_manager,
-                goose_platform.to_string(),
+                a8e_platform.to_string(),
                 capabilities,
             )),
             final_output_tool: Arc::new(Mutex::new(None)),
@@ -356,7 +356,7 @@ impl Agent {
             tools,
             toolshim_tools,
             system_prompt,
-            goose_mode: self.config.goose_mode,
+            a8e_mode: self.config.a8e_mode,
             tool_call_cut_off: Config::global()
                 .get_param::<usize>("A8E_TOOL_CALL_CUTOFF")
                 .unwrap_or(10),
@@ -1076,7 +1076,7 @@ impl Agent {
             mut toolshim_tools,
             mut system_prompt,
             tool_call_cut_off,
-            goose_mode,
+            a8e_mode,
             initial_messages,
         } = context;
         self.reset_retry_attempts().await;
@@ -1233,7 +1233,7 @@ impl Agent {
                                         yield AgentEvent::Message(msg);
                                     }
                                 }
-                                if goose_mode == GooseMode::Chat {
+                                if a8e_mode == A8eMode::Chat {
                                     // Skip all remaining tool calls in chat mode
                                     for request in remaining_requests.iter() {
                                         if let Some(response_msg) = request_to_response_map.get(&request.id) {
@@ -1256,7 +1256,7 @@ impl Agent {
                                         .inspect_tools(
                                             &remaining_requests,
                                             conversation.messages(),
-                                            goose_mode,
+                                            a8e_mode,
                                         )
                                         .await?;
 
@@ -1925,8 +1925,8 @@ impl Agent {
             .expect("No provider configured. Run 'a8e configure' first");
 
         let settings = Settings {
-            goose_provider: Some(provider_name.clone()),
-            goose_model: Some(model_name.clone()),
+            a8e_provider: Some(provider_name.clone()),
+            a8e_model: Some(model_name.clone()),
             temperature: Some(model_config.temperature.unwrap_or(0.0)),
             max_turns: None,
         };

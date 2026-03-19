@@ -1,5 +1,5 @@
 use crate::a8e_apps::McpAppResource;
-use crate::a8e_apps::{GooseApp, WindowProps};
+use crate::a8e_apps::{A8eApp, WindowProps};
 use crate::agents::extension::PlatformExtensionContext;
 use crate::agents::mcp_client::{Error, McpClientTrait};
 use crate::config::paths::Paths;
@@ -156,7 +156,7 @@ impl AppsManagerClient {
         let clock_path = self.apps_dir.join("clock.html");
         if !clock_path.exists() {
             // Parse and save the default clock app
-            let clock_app = GooseApp::from_html(CLOCK_HTML)?;
+            let clock_app = A8eApp::from_html(CLOCK_HTML)?;
             self.save_app(&clock_app)?;
         }
 
@@ -184,16 +184,16 @@ impl AppsManagerClient {
         Ok(apps)
     }
 
-    fn load_app(&self, name: &str) -> Result<GooseApp, String> {
+    fn load_app(&self, name: &str) -> Result<A8eApp, String> {
         let path = self.apps_dir.join(format!("{}.html", name));
 
         let html =
             fs::read_to_string(&path).map_err(|e| format!("Failed to read app file: {}", e))?;
 
-        GooseApp::from_html(&html)
+        A8eApp::from_html(&html)
     }
 
-    fn save_app(&self, app: &GooseApp) -> Result<(), String> {
+    fn save_app(&self, app: &A8eApp) -> Result<(), String> {
         let path = self.apps_dir.join(format!("{}.html", app.resource.name));
 
         let html_content = app.to_html()?;
@@ -394,7 +394,7 @@ impl AppsManagerClient {
             ));
         }
 
-        let app = GooseApp {
+        let app = A8eApp {
             resource: McpAppResource {
                 uri: format!("ui://apps/{}", content.name),
                 name: content.name.clone(),

@@ -958,7 +958,7 @@ impl SummonClient {
                  • Current recipe's sub_recipes\n\
                  • .a8e/recipes/, .a8e/skills/, .a8e/agents/\n\
                  • ~/.config/a8e/recipes/, skills/, agents/\n\
-                 • GOOSE_RECIPE_PATH directories\n\
+                 • A8E_RECIPE_PATH directories\n\
                  • Builtin skills",
             )]);
         }
@@ -1111,9 +1111,9 @@ impl SummonClient {
             self.context.session_manager.clone(),
             crate::config::permission::PermissionManager::instance(),
             None,
-            crate::config::GooseMode::Auto,
+            crate::config::A8eMode::Auto,
             true, // disable session naming for subagents
-            crate::agents::GoosePlatform::GooseCli,
+            crate::agents::A8ePlatform::Cli,
         );
 
         let subagent_session = self
@@ -1342,8 +1342,8 @@ impl SummonClient {
         let model = metadata.model;
 
         let settings = model.map(|m| Settings {
-            goose_model: Some(m),
-            goose_provider: params.provider.clone(),
+            a8e_model: Some(m),
+            a8e_provider: params.provider.clone(),
             temperature: params.temperature,
             max_turns: None,
         });
@@ -1410,7 +1410,7 @@ impl SummonClient {
                 recipe
                     .settings
                     .as_ref()
-                    .and_then(|s| s.goose_provider.clone())
+                    .and_then(|s| s.a8e_provider.clone())
             })
             .or_else(|| {
                 Config::global()
@@ -1427,11 +1427,7 @@ impl SummonClient {
 
         if let Some(model) = &params.model {
             model_config.model_name = model.clone();
-        } else if let Some(model) = recipe
-            .settings
-            .as_ref()
-            .and_then(|s| s.goose_model.as_ref())
-        {
+        } else if let Some(model) = recipe.settings.as_ref().and_then(|s| s.a8e_model.as_ref()) {
             model_config.model_name = model.clone();
         } else if let Ok(model) = Config::global().get_param::<String>("A8E_SUBAGENT_MODEL") {
             model_config.model_name = model;
@@ -1447,7 +1443,7 @@ impl SummonClient {
     }
 
     fn resolve_max_turns(&self, session: &crate::session::Session) -> usize {
-        std::env::var("GOOSE_SUBAGENT_MAX_TURNS")
+        std::env::var("A8E_SUBAGENT_MAX_TURNS")
             .ok()
             .and_then(|v| v.parse().ok())
             .or_else(|| {
@@ -1558,9 +1554,9 @@ impl SummonClient {
             self.context.session_manager.clone(),
             crate::config::permission::PermissionManager::instance(),
             None,
-            crate::config::GooseMode::Auto,
+            crate::config::A8eMode::Auto,
             true, // disable session naming for subagents
-            crate::agents::GoosePlatform::GooseCli,
+            crate::agents::A8ePlatform::Cli,
         );
 
         let subagent_session = self

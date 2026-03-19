@@ -9,10 +9,10 @@ use tempfile::NamedTempFile;
 /// Create temporary markdown file with conversation history
 fn create_temp_file(messages: &[&str]) -> Result<NamedTempFile> {
     let temp_file = Builder::new()
-        .prefix("goose_prompt_")
+        .prefix("a8e_prompt_")
         .suffix(".md")
         .tempfile()?;
-    let mut content = String::from("# Goose Prompt Editor\n\n");
+    let mut content = String::from("# a8e Prompt Editor\n\n");
 
     content.push_str("# Your prompt:\n\n");
 
@@ -84,7 +84,7 @@ pub fn get_editor_input(editor_cmd: &str, messages: &[&str]) -> Result<(String, 
     let temp_file = create_temp_file(messages)?;
     let temp_path = temp_file.path().to_path_buf();
 
-    let symlink_path = PathBuf::from(".goose_prompt_temp.md");
+    let symlink_path = PathBuf::from(".a8e_prompt_temp.md");
 
     if symlink_path.exists() {
         std::fs::remove_file(&symlink_path)?;
@@ -99,7 +99,7 @@ pub fn get_editor_input(editor_cmd: &str, messages: &[&str]) -> Result<(String, 
     let _cleanup_guard = SymlinkCleanup::new(symlink_path.clone());
 
     let _original_template = {
-        let mut template_content = String::from("# Goose Prompt Editor\n\n");
+        let mut template_content = String::from("# a8e Prompt Editor\n\n");
         template_content.push_str("# Your prompt:\n\n");
         if !messages.is_empty() {
             template_content.push_str("# Recent conversation for context (newest first):\n\n");
@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn test_extract_user_input_with_editor_output() {
-        let content = r#"# Goose Prompt Editor
+        let content = r#"# a8e Prompt Editor
 
 # Your prompt:
 This is the hardcoded prompt response
@@ -190,7 +190,7 @@ This is the hardcoded prompt response
 
     #[test]
     fn test_extract_user_input_conversation_history_heading() {
-        let content = r#"# Goose Prompt Editor
+        let content = r#"# a8e Prompt Editor
 
 # Your prompt:
 This is the user's input
@@ -213,11 +213,11 @@ This is the user's input
         let path = temp_file.path();
 
         assert!(path.exists());
-        assert!(path.to_str().unwrap().contains("goose_prompt_"));
+        assert!(path.to_str().unwrap().contains("a8e_prompt_"));
         assert!(path.to_str().unwrap().ends_with(".md"));
 
         let content = fs::read_to_string(path).unwrap();
-        assert!(content.contains("# Goose Prompt Editor"));
+        assert!(content.contains("# a8e Prompt Editor"));
         assert!(content.contains("## User: Hello"));
         assert!(content.contains("## Assistant: Hi there!"));
         assert!(content.contains("# Your prompt:"));
@@ -239,7 +239,7 @@ This is the user's input
 
     #[test]
     fn test_extract_user_input() {
-        let content = r#"# Goose Prompt Editor
+        let content = r#"# a8e Prompt Editor
 
 # Recent conversation for context:
 

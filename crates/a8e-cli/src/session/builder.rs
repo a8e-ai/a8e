@@ -357,7 +357,7 @@ fn resolve_provider_and_model(
         .provider
         .clone()
         .or(saved_provider)
-        .or_else(|| recipe_settings.and_then(|s| s.goose_provider.clone()))
+        .or_else(|| recipe_settings.and_then(|s| s.a8e_provider.clone()))
         .or_else(|| config.get_a8e_provider().ok())
         .expect("No provider configured. Run 'a8e configure' first");
 
@@ -365,7 +365,7 @@ fn resolve_provider_and_model(
         .model
         .clone()
         .or_else(|| saved_model_config.as_ref().map(|mc| mc.model_name.clone()))
-        .or_else(|| recipe_settings.and_then(|s| s.goose_model.clone()))
+        .or_else(|| recipe_settings.and_then(|s| s.a8e_model.clone()))
         .or_else(|| config.get_a8e_model().ok())
         .expect("No model configured. Run 'a8e configure' first");
 
@@ -564,7 +564,7 @@ async fn configure_session_prompts(
             .await;
     }
 
-    let system_prompt_file: Option<String> = config.get_param("GOOSE_SYSTEM_PROMPT_FILE_PATH").ok();
+    let system_prompt_file: Option<String> = config.get_param("A8E_SYSTEM_PROMPT_FILE_PATH").ok();
     if let Some(ref path) = system_prompt_file {
         let override_prompt =
             std::fs::read_to_string(path).expect("Failed to read system prompt file");
@@ -694,7 +694,7 @@ pub async fn build_session(session_config: SessionBuilderConfig) -> CliSession {
             }
         });
 
-    let debug_mode = session_config.debug || config.get_param("GOOSE_DEBUG").unwrap_or(false);
+    let debug_mode = session_config.debug || config.get_param("A8E_DEBUG").unwrap_or(false);
 
     let session = CliSession::new(
         Arc::try_unwrap(agent_ptr).unwrap_or_else(|_| panic!("There should be no more references")),
