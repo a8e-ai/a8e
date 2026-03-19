@@ -15,10 +15,15 @@ use crate::providers::formats::openai::create_request;
 use rmcp::model::Tool;
 
 const PAEAN_AI_PROVIDER_NAME: &str = "paean_ai";
-pub const PAEAN_AI_DEFAULT_MODEL: &str = "GLM-4.5";
-pub const PAEAN_AI_DEFAULT_FAST_MODEL: &str = "GLM-4.5-Air";
+pub const PAEAN_AI_DEFAULT_MODEL: &str = "gemini-3.1-flash-lite-preview";
+pub const PAEAN_AI_DEFAULT_FAST_MODEL: &str = "gemini-3.1-flash-lite-preview";
 
 pub const PAEAN_AI_KNOWN_MODELS: &[&str] = &[
+    // Google Gemini 3.1 Preview
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-pro-preview",
+    // Google Gemini 3 Preview
+    "gemini-3-flash-preview",
     // ZhipuAI GLM — optimised for coding tasks
     "GLM-4.7",
     "GLM-4.6",
@@ -27,9 +32,6 @@ pub const PAEAN_AI_KNOWN_MODELS: &[&str] = &[
     // Anthropic Claude via Google Vertex AI
     "claude-sonnet-4-6",
     "claude-opus-4-6",
-    // Google Gemini 3 Preview
-    "gemini-3-flash-preview",
-    "gemini-3-pro-preview",
 ];
 pub const PAEAN_AI_DOC_URL: &str = "https://api.paean.ai";
 
