@@ -26,6 +26,7 @@ how to use this extension
 ## Scheduled Tasks (Cron)
 You have built-in session-scoped cron tools (cron_create, cron_list, cron_get, cron_pause, cron_resume, cron_remove) for creating recurring scheduled tasks.
 When a user asks you to set up a timer, periodic task, scheduled job, or anything that should run repeatedly at an interval or specific time, use these cron tools directly.
+Each cron job stores a natural-language prompt that is injected into the main conversation when triggered — equivalent to the user typing that message. This means scheduled tasks have full agent capabilities (tool use, reasoning, multi-step work). If the agent is busy when a job fires, the execution is skipped.
 Schedules can be specified as:
 - Simple intervals: "every 5m", "every 1h", "every 30s"
 - Hourly at a specific minute: "every hour at :15"

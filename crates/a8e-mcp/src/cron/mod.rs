@@ -1,3 +1,16 @@
+//! Session-Scoped Cron Scheduler (MCP Server)
+//!
+//! Pushes natural-language prompts into the main agent interaction on a
+//! schedule, as if the user had typed them.  This gives cron jobs full
+//! agent capabilities (tool use, reasoning, multi-step tasks) instead of
+//! being limited to simple shell commands.
+//!
+//! Key behaviour:
+//! - When a job fires and the agent is **idle**, the prompt is placed in
+//!   a shared queue for the main session loop to consume.
+//! - When the agent is **busy**, the execution is skipped.
+//! - All jobs are session-scoped and cleaned up on process exit.
+
 use indoc::formatdoc;
 use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -10,21 +23,27 @@ use rmcp::{
     tool, tool_handler, tool_router, RoleServer, ServerHandler,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, collections::VecDeque, sync::Arc};
 use tokio::sync::Mutex;
 
 const MAX_JOBS_PER_SESSION: usize = 20;
+
+// ---------------------------------------------------------------------------
+// Public types
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CronJobInfo {
     pub id: String,
     pub schedule: String,
-    pub command: String,
+    /// Natural-language prompt injected into the agent conversation
+    pub prompt: String,
     pub cwd: Option<String>,
     pub created_at: String,
     pub last_run_at: Option<String>,
     pub next_run_at: Option<String>,
     pub run_count: u64,
+    pub skip_count: u64,
     pub last_result: Option<CronJobResult>,
     pub status: CronJobStatus,
 }
@@ -42,12 +61,35 @@ pub enum CronJobStatus {
     Paused,
 }
 
+/// A prompt event that should be injected into the main agent conversation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CronPromptEvent {
+    pub job_id: String,
+    pub prompt: String,
+    pub cwd: Option<String>,
+    pub schedule: String,
+}
+
+// ---------------------------------------------------------------------------
+// Internal types
+// ---------------------------------------------------------------------------
+
 struct InternalJob {
     info: CronJobInfo,
     cancel_token: tokio_util::sync::CancellationToken,
 }
 
 type JobRegistry = Arc<Mutex<HashMap<String, InternalJob>>>;
+
+/// Shared queue of prompts waiting to be consumed by the main session loop.
+pub type PromptQueue = Arc<Mutex<VecDeque<CronPromptEvent>>>;
+
+/// Callback that returns `true` when the agent is busy.
+pub type AgentBusyChecker = Arc<dyn Fn() -> bool + Send + Sync>;
+
+// ---------------------------------------------------------------------------
+// MCP Tool Params
+// ---------------------------------------------------------------------------
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CronCreateParams {
@@ -56,9 +98,11 @@ pub struct CronCreateParams {
     /// - "every hour at :15" (hourly at specific minute)
     /// - Cron expression: "*/10 * * * *" (every 10 min), "0 9 * * 1" (Monday 9AM)
     pub schedule: String,
-    /// Shell command to execute on each trigger
-    pub command: String,
-    /// Working directory for the command (optional, defaults to current dir)
+    /// Natural-language prompt to inject into the agent conversation on each
+    /// trigger. Equivalent to the user typing this message. The agent will
+    /// process it with full tool access and reasoning capabilities.
+    pub prompt: String,
+    /// Working directory context for the prompt (optional)
     #[serde(default)]
     pub cwd: Option<String>,
 }
@@ -90,11 +134,17 @@ pub struct CronResumeParams {
     pub job_id: String,
 }
 
+// ---------------------------------------------------------------------------
+// Server
+// ---------------------------------------------------------------------------
+
 #[derive(Clone)]
 pub struct CronServer {
     tool_router: ToolRouter<Self>,
     instructions: String,
     jobs: JobRegistry,
+    prompt_queue: PromptQueue,
+    busy_checker: Option<AgentBusyChecker>,
 }
 
 impl Default for CronServer {
@@ -107,23 +157,46 @@ impl Default for CronServer {
 impl CronServer {
     pub fn new() -> Self {
         let instructions = formatdoc! {r#"
-            Session-scoped scheduled task (cron) management.
-            Create, list, pause, resume, and remove recurring shell commands
-            that run on a schedule within the current CLI session.
-            All jobs are automatically cleaned up when the session ends.
-            Use this to set up periodic tasks like health checks, log rotation,
-            data fetching, file syncing, or any recurring automation."#
+            Session-scoped scheduled task management with prompt injection.
+            Create, list, pause, resume, and remove recurring agent prompts
+            that fire on a schedule within the current CLI session.
+            Each job stores a natural-language prompt that is injected into
+            the main agent conversation when triggered — equivalent to the
+            user typing the message. If the agent is busy, the prompt is
+            skipped. All jobs are automatically cleaned up when the session
+            ends."#
         };
         Self {
             tool_router: Self::tool_router(),
             instructions,
             jobs: Arc::new(Mutex::new(HashMap::new())),
+            prompt_queue: Arc::new(Mutex::new(VecDeque::new())),
+            busy_checker: None,
         }
+    }
+
+    /// Create a CronServer with a shared prompt queue that the main session
+    /// loop can drain to get pending cron prompts.
+    pub fn with_prompt_queue(prompt_queue: PromptQueue) -> Self {
+        let mut server = Self::new();
+        server.prompt_queue = prompt_queue;
+        server
+    }
+
+    /// Set the agent-busy checker callback.
+    pub fn with_busy_checker(mut self, checker: AgentBusyChecker) -> Self {
+        self.busy_checker = Some(checker);
+        self
+    }
+
+    /// Get a clone of the prompt queue for external consumption.
+    pub fn prompt_queue(&self) -> PromptQueue {
+        self.prompt_queue.clone()
     }
 
     #[tool(
         name = "cron_create",
-        description = "Create a session-scoped scheduled task (cron job). The job runs repeatedly on the given schedule until removed or the session ends. Schedules: 'every 5m', 'every 1h', 'every 30s', 'every hour at :15', or a 5-field cron expression like '*/10 * * * *'. Commands are executed through the shell."
+        description = "Create a session-scoped scheduled task. The prompt is injected into the main agent conversation on each trigger, giving the task full agent capabilities (tool use, reasoning, multi-step work). If the agent is busy, execution is skipped. Schedules: 'every 5m', 'every 1h', 'every 30s', 'every hour at :15', or a 5-field cron expression like '*/10 * * * *'."
     )]
     async fn cron_create(
         &self,
@@ -155,12 +228,13 @@ impl CronServer {
         let info = CronJobInfo {
             id: id.clone(),
             schedule: params.schedule.clone(),
-            command: params.command.clone(),
+            prompt: params.prompt.clone(),
             cwd: params.cwd.clone(),
             created_at: now.to_rfc3339(),
             last_run_at: None,
             next_run_at: None,
             run_count: 0,
+            skip_count: 0,
             last_result: None,
             status: CronJobStatus::Active,
         };
@@ -175,18 +249,20 @@ impl CronServer {
 
         spawn_job_executor(
             id.clone(),
-            params.command,
+            params.prompt,
             params.cwd,
             parsed,
             cancel_token,
             jobs,
+            self.prompt_queue.clone(),
+            self.busy_checker.clone(),
         );
 
         let result = serde_json::json!({
             "success": true,
             "message": format!("Cron job created: {}", params.schedule),
             "job": info,
-            "note": "This job is session-scoped and will be removed when the CLI session ends."
+            "note": "This job will inject the prompt into the main agent conversation on each trigger. If the agent is busy, the execution will be skipped."
         });
 
         Ok(CallToolResult::success(vec![Content::text(
@@ -196,7 +272,7 @@ impl CronServer {
 
     #[tool(
         name = "cron_list",
-        description = "List all session-scoped cron jobs. Shows schedule, status, run count, last/next run time, and last result for each job."
+        description = "List all session-scoped cron jobs. Shows schedule, prompt, status, run count, skip count, last/next run time, and last result for each job."
     )]
     async fn cron_list(
         &self,
@@ -210,7 +286,7 @@ impl CronServer {
             "success": true,
             "jobs": jobs,
             "count": jobs.len(),
-            "note": "All jobs are session-scoped. They will be removed when the CLI session ends."
+            "note": "All jobs are session-scoped. Prompts are injected into the main conversation when triggered."
         });
 
         Ok(CallToolResult::success(vec![Content::text(
@@ -283,7 +359,7 @@ impl CronServer {
 
     #[tool(
         name = "cron_pause",
-        description = "Pause an active cron job. The job remains registered but stops executing."
+        description = "Pause an active cron job. The job remains registered but stops firing prompts."
     )]
     async fn cron_pause(
         &self,
@@ -528,13 +604,20 @@ fn get_next_cron_time(
     after + chrono::Duration::hours(1)
 }
 
+// ---------------------------------------------------------------------------
+// Job Executor — Prompt Injection
+// ---------------------------------------------------------------------------
+
+#[allow(clippy::too_many_arguments)]
 fn spawn_job_executor(
     job_id: String,
-    command: String,
+    prompt: String,
     cwd: Option<String>,
     schedule: ScheduleKind,
     cancel_token: tokio_util::sync::CancellationToken,
     jobs: JobRegistry,
+    prompt_queue: PromptQueue,
+    busy_checker: Option<AgentBusyChecker>,
 ) {
     tokio::spawn(async move {
         match schedule {
@@ -562,7 +645,15 @@ fn spawn_job_executor(
                     };
 
                     if should_run {
-                        execute_and_update(&job_id, &command, cwd.as_deref(), &jobs).await;
+                        inject_prompt(
+                            &job_id,
+                            &prompt,
+                            cwd.as_deref(),
+                            &jobs,
+                            &prompt_queue,
+                            &busy_checker,
+                        )
+                        .await;
                     }
                 }
             }
@@ -594,7 +685,15 @@ fn spawn_job_executor(
                     };
 
                     if should_run {
-                        execute_and_update(&job_id, &command, cwd.as_deref(), &jobs).await;
+                        inject_prompt(
+                            &job_id,
+                            &prompt,
+                            cwd.as_deref(),
+                            &jobs,
+                            &prompt_queue,
+                            &busy_checker,
+                        )
+                        .await;
                     }
                 }
             }
@@ -602,71 +701,69 @@ fn spawn_job_executor(
     });
 }
 
-async fn execute_and_update(job_id: &str, command: &str, cwd: Option<&str>, jobs: &JobRegistry) {
-    let result = execute_shell_command(command, cwd).await;
+async fn inject_prompt(
+    job_id: &str,
+    prompt: &str,
+    cwd: Option<&str>,
+    jobs: &JobRegistry,
+    prompt_queue: &PromptQueue,
+    busy_checker: &Option<AgentBusyChecker>,
+) {
+    // Check if the agent is busy
+    if let Some(checker) = busy_checker {
+        if checker() {
+            let mut reg = jobs.lock().await;
+            if let Some(job) = reg.get_mut(job_id) {
+                job.info.skip_count += 1;
+                job.info.last_result = Some(CronJobResult {
+                    success: false,
+                    summary: "Skipped: agent is busy processing another request".to_string(),
+                });
+            }
+            return;
+        }
+    }
+
+    let schedule = {
+        let reg = jobs.lock().await;
+        reg.get(job_id)
+            .map(|j| j.info.schedule.clone())
+            .unwrap_or_default()
+    };
+
+    // Push the prompt into the shared queue
+    {
+        let mut queue = prompt_queue.lock().await;
+        queue.push_back(CronPromptEvent {
+            job_id: job_id.to_string(),
+            prompt: prompt.to_string(),
+            cwd: cwd.map(|s| s.to_string()),
+            schedule,
+        });
+    }
+
+    // Update job metadata
     let now = chrono::Utc::now().to_rfc3339();
+    let summary = if prompt.len() > 100 {
+        format!("Prompt injected: \"{}...\"", &prompt[..100])
+    } else {
+        format!("Prompt injected: \"{}\"", prompt)
+    };
 
     let mut reg = jobs.lock().await;
     if let Some(job) = reg.get_mut(job_id) {
         job.info.last_run_at = Some(now);
         job.info.run_count += 1;
-        job.info.last_result = Some(result);
+        job.info.last_result = Some(CronJobResult {
+            success: true,
+            summary,
+        });
     }
 }
 
-async fn execute_shell_command(command: &str, cwd: Option<&str>) -> CronJobResult {
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| {
-        if cfg!(windows) {
-            "cmd".to_string()
-        } else {
-            "bash".to_string()
-        }
-    });
-
-    let shell_arg = if cfg!(windows) { "/c" } else { "-c" };
-
-    let mut cmd = tokio::process::Command::new(&shell);
-    cmd.arg(shell_arg).arg(command);
-    cmd.stdout(std::process::Stdio::piped());
-    cmd.stderr(std::process::Stdio::piped());
-    cmd.stdin(std::process::Stdio::null());
-
-    if let Some(dir) = cwd {
-        cmd.current_dir(dir);
-    }
-
-    match tokio::time::timeout(tokio::time::Duration::from_secs(300), cmd.output()).await {
-        Ok(Ok(output)) => {
-            let success = output.status.success();
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let summary = if success {
-                let s = stdout.trim();
-                if s.is_empty() {
-                    "OK".to_string()
-                } else {
-                    s.chars().take(200).collect()
-                }
-            } else {
-                let s = stderr.trim();
-                if s.is_empty() {
-                    format!("Exit code: {}", output.status.code().unwrap_or(-1))
-                } else {
-                    s.chars().take(200).collect()
-                }
-            };
-            CronJobResult { success, summary }
-        }
-        Ok(Err(e)) => CronJobResult {
-            success: false,
-            summary: format!("Failed to execute: {}", e),
-        },
-        Err(_) => CronJobResult {
-            success: false,
-            summary: "Command timed out after 300s".to_string(),
-        },
-    }
-}
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
