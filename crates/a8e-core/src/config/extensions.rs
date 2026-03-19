@@ -167,6 +167,32 @@ pub fn get_warnings() -> Vec<String> {
     warnings
 }
 
+/// Builtin extensions that are always injected into every session.
+const AUTO_BUILTINS: &[(&str, &str)] = &[("cron", "Session-scoped scheduled tasks")];
+
+fn inject_auto_builtins(mut extensions: Vec<ExtensionConfig>) -> Vec<ExtensionConfig> {
+    for &(name, description) in AUTO_BUILTINS {
+        let already_present = extensions.iter().any(|e| {
+            if let ExtensionConfig::Builtin { name: ref n, .. } = e {
+                n == name
+            } else {
+                false
+            }
+        });
+        if !already_present {
+            extensions.push(ExtensionConfig::Builtin {
+                name: name.to_string(),
+                display_name: None,
+                description: description.to_string(),
+                timeout: Some(DEFAULT_EXTENSION_TIMEOUT),
+                bundled: Some(true),
+                available_tools: vec![],
+            });
+        }
+    }
+    extensions
+}
+
 pub fn resolve_extensions_for_new_session(
     recipe_extensions: Option<&[ExtensionConfig]>,
     override_extensions: Option<Vec<ExtensionConfig>>,
@@ -178,6 +204,8 @@ pub fn resolve_extensions_for_new_session(
     } else {
         get_enabled_extensions()
     };
+
+    let extensions = inject_auto_builtins(extensions);
 
     extensions
         .into_iter()
@@ -210,5 +238,59 @@ mod tests {
 
         assert!(!is_extension_available(&unknown_platform));
         assert!(is_extension_available(&builtin));
+    }
+
+    #[test]
+    fn test_inject_auto_builtins_adds_cron() {
+        let extensions = vec![ExtensionConfig::Builtin {
+            name: "developer".to_string(),
+            description: "".to_string(),
+            display_name: Some("Developer".to_string()),
+            timeout: None,
+            bundled: None,
+            available_tools: vec![],
+        }];
+
+        let result = inject_auto_builtins(extensions);
+        assert_eq!(result.len(), 2);
+        assert!(result.iter().any(|e| e.name() == "cron"));
+    }
+
+    #[test]
+    fn test_inject_auto_builtins_does_not_duplicate() {
+        let extensions = vec![
+            ExtensionConfig::Builtin {
+                name: "developer".to_string(),
+                description: "".to_string(),
+                display_name: Some("Developer".to_string()),
+                timeout: None,
+                bundled: None,
+                available_tools: vec![],
+            },
+            ExtensionConfig::Builtin {
+                name: "cron".to_string(),
+                description: "custom".to_string(),
+                display_name: None,
+                timeout: Some(60),
+                bundled: Some(true),
+                available_tools: vec![],
+            },
+        ];
+
+        let result = inject_auto_builtins(extensions);
+        assert_eq!(result.len(), 2);
+        let cron = result.iter().find(|e| e.name() == "cron").unwrap();
+        if let ExtensionConfig::Builtin { description, .. } = cron {
+            assert_eq!(description, "custom");
+        } else {
+            panic!("cron should be a Builtin");
+        }
+    }
+
+    #[test]
+    fn test_inject_auto_builtins_on_empty() {
+        let result = inject_auto_builtins(vec![]);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name(), "cron");
     }
 }

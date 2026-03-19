@@ -79,7 +79,7 @@ async fn create_agent(provider_name: &str, model: &str) -> Result<Agent> {
         )
         .await?;
 
-    let enabled_configs = a8e_core::config::get_enabled_extensions();
+    let enabled_configs = a8e_core::config::resolve_extensions_for_new_session(None, None);
     for config in &enabled_configs {
         if let Err(e) = agent.add_extension(config.clone(), &init_session.id).await {
             tracing::warn!("Failed to load extension {}: {}", config.name(), e);
