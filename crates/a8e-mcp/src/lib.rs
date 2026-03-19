@@ -21,6 +21,7 @@ pub mod tutorial;
 pub use autovisualiser::AutoVisualiserRouter;
 pub use computercontroller::ComputerControllerServer;
 pub use cron::CronServer;
+pub use cron::{set_agent_busy, take_cron_prompt_receiver, CronPromptEvent};
 pub use developer::rmcp_developer::DeveloperServer;
 pub use developer::rmcp_developer::WORKING_DIR_PLACEHOLDER;
 pub use memory::MemoryServer;

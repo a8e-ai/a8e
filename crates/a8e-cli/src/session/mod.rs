@@ -468,41 +468,89 @@ impl CliSession {
     pub async fn interactive(&mut self, prompt: Option<String>) -> Result<()> {
         if let Some(prompt) = prompt {
             let msg = Message::user().with_text(&prompt);
+            a8e_mcp::set_agent_busy(true);
             self.process_message(msg, CancellationToken::default())
                 .await?;
         }
 
         self.update_completion_cache().await?;
 
-        let mut editor = self.create_editor()?;
-        let history_manager = HistoryManager::new();
-        history_manager.load(&mut editor);
+        let mut cron_rx = a8e_mcp::take_cron_prompt_receiver();
+
+        // Spawn a dedicated thread for readline (Editor is !Send)
+        let (input_tx, mut input_rx) =
+            tokio::sync::mpsc::unbounded_channel::<Result<InputResult>>();
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel::<bool>();
+
+        let completion_cache = self.completion_cache.clone();
+        let edit_mode = self.edit_mode;
+
+        std::thread::spawn(move || {
+            let builder = rustyline::Config::builder()
+                .completion_type(rustyline::CompletionType::Circular);
+            let builder = match edit_mode {
+                Some(mode) => builder.edit_mode(mode),
+                None => builder.edit_mode(EditMode::Emacs),
+            };
+            let config = builder.build();
+            let Ok(mut editor) = rustyline::Editor::<
+                completion::A8eCompleter,
+                rustyline::history::DefaultHistory,
+            >::with_config(config)
+            else {
+                return;
+            };
+            editor.set_helper(Some(completion::A8eCompleter::new(completion_cache)));
+
+            let history_manager = HistoryManager::new();
+            history_manager.load(&mut editor);
+
+            while let Ok(true) = ready_rx.recv() {
+                let result = input::get_input(&mut editor, None);
+                history_manager.save(&mut editor);
+                let is_exit = matches!(&result, Ok(InputResult::Exit));
+                if input_tx.send(result).is_err() || is_exit {
+                    break;
+                }
+            }
+        });
 
         output::display_greeting();
-        loop {
+
+        'outer: loop {
             self.display_context_usage().await?;
-
-            let conversation_strings: Vec<String> = self
-                .messages
-                .iter()
-                .map(|msg| {
-                    let role = match msg.role {
-                        rmcp::model::Role::User => "User",
-                        rmcp::model::Role::Assistant => "Assistant",
-                    };
-                    format!("## {}: {}", role, msg.as_concat_text())
-                })
-                .collect();
-
             output::run_status_hook("waiting");
-            let input = input::get_input(&mut editor, Some(&conversation_strings))?;
-            if matches!(input, InputResult::Exit) {
+            a8e_mcp::set_agent_busy(false);
+
+            if ready_tx.send(true).is_err() {
                 break;
             }
-            self.handle_input(input, &history_manager, &mut editor)
-                .await?;
+
+            loop {
+                tokio::select! {
+                    result = input_rx.recv() => {
+                        match result {
+                            Some(Ok(InputResult::Exit)) => break 'outer,
+                            Some(Ok(InputResult::Retry)) => break,
+                            Some(Ok(input_result)) => {
+                                a8e_mcp::set_agent_busy(true);
+                                self.handle_input_no_editor(input_result).await?;
+                                break;
+                            }
+                            Some(Err(e)) => return Err(e),
+                            None => break 'outer,
+                        }
+                    }
+                    Some(event) = recv_cron_prompt(&mut cron_rx) => {
+                        a8e_mcp::set_agent_busy(true);
+                        self.process_cron_prompt(event).await?;
+                        a8e_mcp::set_agent_busy(false);
+                    }
+                }
+            }
         }
 
+        let _ = ready_tx.send(false);
         println!(
             "\n  {} {} {} {}",
             console::style("●").red(),
@@ -511,143 +559,6 @@ impl CliSession {
             console::style(&self.session_id).dim()
         );
 
-        Ok(())
-    }
-
-    fn create_editor(
-        &self,
-    ) -> Result<rustyline::Editor<A8eCompleter, rustyline::history::DefaultHistory>> {
-        let builder =
-            rustyline::Config::builder().completion_type(rustyline::CompletionType::Circular);
-        let builder = match self.edit_mode {
-            Some(mode) => builder.edit_mode(mode),
-            None => builder.edit_mode(EditMode::Emacs),
-        };
-        let config = builder.build();
-        let mut editor =
-            rustyline::Editor::<A8eCompleter, rustyline::history::DefaultHistory>::with_config(
-                config,
-            )?;
-        let completer = A8eCompleter::new(self.completion_cache.clone());
-        editor.set_helper(Some(completer));
-        Ok(editor)
-    }
-
-    async fn handle_input(
-        &mut self,
-        input: InputResult,
-        history: &HistoryManager,
-        editor: &mut rustyline::Editor<A8eCompleter, rustyline::history::DefaultHistory>,
-    ) -> Result<()> {
-        match input {
-            InputResult::Message(content) => {
-                self.handle_message_input(&content, history, editor).await?;
-            }
-            InputResult::Exit => unreachable!("Exit is handled in the main loop"),
-            InputResult::AddExtension(cmd) => {
-                history.save(editor);
-                match self.add_extension(cmd.clone()).await {
-                    Ok(_) => output::render_extension_success(&cmd),
-                    Err(e) => output::render_extension_error(&cmd, &e.to_string()),
-                }
-            }
-            InputResult::AddBuiltin(names) => {
-                history.save(editor);
-                match self.add_builtin(names.clone()).await {
-                    Ok(_) => output::render_builtin_success(&names),
-                    Err(e) => output::render_builtin_error(&names, &e.to_string()),
-                }
-            }
-            InputResult::ToggleTheme => {
-                history.save(editor);
-                self.handle_toggle_theme();
-            }
-            InputResult::ToggleFullToolOutput => {
-                history.save(editor);
-                self.handle_toggle_full_tool_output();
-            }
-            InputResult::SelectTheme(theme_name) => {
-                history.save(editor);
-                self.handle_select_theme(&theme_name);
-            }
-            InputResult::Retry => {}
-            InputResult::ListPrompts(extension) => {
-                history.save(editor);
-                match self.list_prompts(extension).await {
-                    Ok(prompts) => output::render_prompts(&prompts),
-                    Err(e) => output::render_error(&e.to_string()),
-                }
-            }
-            InputResult::A8eMode(mode) => {
-                history.save(editor);
-                self.handle_a8e_mode(&mode)?;
-            }
-            InputResult::Plan(options) => {
-                self.handle_plan_mode(options).await?;
-            }
-            InputResult::EndPlan => {
-                self.run_mode = RunMode::Normal;
-                output::render_exit_plan_mode();
-            }
-            InputResult::Clear => {
-                history.save(editor);
-                self.handle_clear().await?;
-            }
-            InputResult::PromptCommand(opts) => {
-                history.save(editor);
-                self.handle_prompt_command(opts).await?;
-            }
-            InputResult::Recipe(filepath_opt) => {
-                history.save(editor);
-                self.handle_recipe(filepath_opt).await;
-            }
-            InputResult::Compact => {
-                history.save(editor);
-                self.handle_compact().await?;
-            }
-        }
-        Ok(())
-    }
-
-    async fn handle_message_input(
-        &mut self,
-        content: &str,
-        history: &HistoryManager,
-        editor: &mut rustyline::Editor<A8eCompleter, rustyline::history::DefaultHistory>,
-    ) -> Result<()> {
-        match self.run_mode {
-            RunMode::Normal => {
-                history.save(editor);
-                self.push_message(Message::user().with_text(content));
-
-                if let Err(e) = crate::project_tracker::update_project_tracker(
-                    Some(content),
-                    Some(&self.session_id),
-                ) {
-                    tracing::debug!("Failed to update project tracker: {}", e);
-                }
-
-                let _provider = self.agent.provider().await?;
-
-                output::run_status_hook("thinking");
-                output::show_thinking();
-                let start_time = Instant::now();
-                self.process_agent_response(true, CancellationToken::default())
-                    .await?;
-                output::hide_thinking();
-
-                let elapsed = start_time.elapsed();
-                let elapsed_str = format_elapsed_time(elapsed);
-                println!("{}", console::style(format!("  ⏱ {}", elapsed_str)).dim());
-            }
-            RunMode::Plan => {
-                let mut plan_messages = self.messages.clone();
-                plan_messages.push(Message::user().with_text(content));
-                let reasoner = get_reasoner().await?;
-                self.plan_with_reasoner_model(plan_messages, reasoner)
-                    .await?;
-            }
-        }
         Ok(())
     }
 
@@ -1436,8 +1347,99 @@ impl CliSession {
         Ok(path)
     }
 
+    /// Handle an input result without editor/history references (used by threaded input).
+    async fn handle_input_no_editor(&mut self, input: InputResult) -> Result<()> {
+        match input {
+            InputResult::Message(content) => {
+                self.push_message(Message::user().with_text(&content));
+                if let Err(e) = crate::project_tracker::update_project_tracker(
+                    Some(&content),
+                    Some(&self.session_id),
+                ) {
+                    tracing::debug!("Failed to update project tracker: {}", e);
+                }
+                let _provider = self.agent.provider().await?;
+                output::run_status_hook("thinking");
+                output::show_thinking();
+                let start_time = Instant::now();
+                self.process_agent_response(true, CancellationToken::default())
+                    .await?;
+                output::hide_thinking();
+                let elapsed = start_time.elapsed();
+                let elapsed_str = format_elapsed_time(elapsed);
+                println!("{}", console::style(format!("  ⏱ {}", elapsed_str)).dim());
+            }
+            InputResult::AddExtension(cmd) => match self.add_extension(cmd.clone()).await {
+                Ok(_) => output::render_extension_success(&cmd),
+                Err(e) => output::render_extension_error(&cmd, &e.to_string()),
+            },
+            InputResult::AddBuiltin(names) => match self.add_builtin(names.clone()).await {
+                Ok(_) => output::render_builtin_success(&names),
+                Err(e) => output::render_builtin_error(&names, &e.to_string()),
+            },
+            InputResult::ToggleTheme => self.handle_toggle_theme(),
+            InputResult::ToggleFullToolOutput => self.handle_toggle_full_tool_output(),
+            InputResult::SelectTheme(theme_name) => self.handle_select_theme(&theme_name),
+            InputResult::ListPrompts(extension) => match self.list_prompts(extension).await {
+                Ok(prompts) => output::render_prompts(&prompts),
+                Err(e) => output::render_error(&e.to_string()),
+            },
+            InputResult::A8eMode(mode) => self.handle_a8e_mode(&mode)?,
+            InputResult::Plan(options) => self.handle_plan_mode(options).await?,
+            InputResult::EndPlan => {
+                self.run_mode = RunMode::Normal;
+                output::render_exit_plan_mode();
+            }
+            InputResult::Clear => self.handle_clear().await?,
+            InputResult::PromptCommand(opts) => self.handle_prompt_command(opts).await?,
+            InputResult::Recipe(filepath_opt) => self.handle_recipe(filepath_opt).await,
+            InputResult::Compact => self.handle_compact().await?,
+            InputResult::Exit | InputResult::Retry => {}
+        }
+        Ok(())
+    }
+
+    /// Process a cron-triggered prompt as if the user typed it.
+    async fn process_cron_prompt(&mut self, event: a8e_mcp::CronPromptEvent) -> Result<()> {
+        println!(
+            "\n  {} {} {}",
+            console::style("🕐").bold(),
+            console::style(format!("[Cron: {}]", event.schedule)).cyan(),
+            console::style("Executing scheduled prompt...").dim()
+        );
+        println!(
+            "  {} {}",
+            console::style("∞").magenta().bold(),
+            console::style(&event.prompt).white()
+        );
+
+        self.push_message(Message::user().with_text(&event.prompt));
+
+        output::run_status_hook("thinking");
+        output::show_thinking();
+        let start_time = Instant::now();
+        self.process_agent_response(true, CancellationToken::default())
+            .await?;
+        output::hide_thinking();
+
+        let elapsed = start_time.elapsed();
+        let elapsed_str = format_elapsed_time(elapsed);
+        println!("{}", console::style(format!("  ⏱ {}", elapsed_str)).dim());
+
+        Ok(())
+    }
+
     fn push_message(&mut self, message: Message) {
         self.messages.push(message);
+    }
+}
+
+async fn recv_cron_prompt(
+    rx: &mut Option<tokio::sync::mpsc::UnboundedReceiver<a8e_mcp::CronPromptEvent>>,
+) -> Option<a8e_mcp::CronPromptEvent> {
+    match rx {
+        Some(rx) => rx.recv().await,
+        None => std::future::pending().await,
     }
 }
 

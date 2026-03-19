@@ -23,10 +23,50 @@ use rmcp::{
     tool, tool_handler, tool_router, RoleServer, ServerHandler,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, collections::VecDeque, sync::Arc};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::{collections::HashMap, sync::Arc, sync::OnceLock};
 use tokio::sync::Mutex;
 
 const MAX_JOBS_PER_SESSION: usize = 20;
+
+// ---------------------------------------------------------------------------
+// Global cron channel — bridges the MCP extension and the main session loop
+// ---------------------------------------------------------------------------
+
+static AGENT_BUSY: AtomicBool = AtomicBool::new(false);
+
+struct GlobalCronChannel {
+    sender: tokio::sync::mpsc::UnboundedSender<CronPromptEvent>,
+    receiver: std::sync::Mutex<Option<tokio::sync::mpsc::UnboundedReceiver<CronPromptEvent>>>,
+}
+
+static CRON_CHANNEL: OnceLock<GlobalCronChannel> = OnceLock::new();
+
+fn get_or_init_channel() -> &'static GlobalCronChannel {
+    CRON_CHANNEL.get_or_init(|| {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        GlobalCronChannel {
+            sender: tx,
+            receiver: std::sync::Mutex::new(Some(rx)),
+        }
+    })
+}
+
+/// Take the global cron prompt receiver.  Call once from the session loop.
+/// Returns `None` if already taken.
+pub fn take_cron_prompt_receiver(
+) -> Option<tokio::sync::mpsc::UnboundedReceiver<CronPromptEvent>> {
+    get_or_init_channel().receiver.lock().unwrap().take()
+}
+
+/// Set the global "agent is busy" flag.
+pub fn set_agent_busy(busy: bool) {
+    AGENT_BUSY.store(busy, Ordering::SeqCst);
+}
+
+fn is_agent_busy() -> bool {
+    AGENT_BUSY.load(Ordering::SeqCst)
+}
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -80,12 +120,6 @@ struct InternalJob {
 }
 
 type JobRegistry = Arc<Mutex<HashMap<String, InternalJob>>>;
-
-/// Shared queue of prompts waiting to be consumed by the main session loop.
-pub type PromptQueue = Arc<Mutex<VecDeque<CronPromptEvent>>>;
-
-/// Callback that returns `true` when the agent is busy.
-pub type AgentBusyChecker = Arc<dyn Fn() -> bool + Send + Sync>;
 
 // ---------------------------------------------------------------------------
 // MCP Tool Params
@@ -143,8 +177,6 @@ pub struct CronServer {
     tool_router: ToolRouter<Self>,
     instructions: String,
     jobs: JobRegistry,
-    prompt_queue: PromptQueue,
-    busy_checker: Option<AgentBusyChecker>,
 }
 
 impl Default for CronServer {
@@ -166,32 +198,12 @@ impl CronServer {
             skipped. All jobs are automatically cleaned up when the session
             ends."#
         };
+        get_or_init_channel();
         Self {
             tool_router: Self::tool_router(),
             instructions,
             jobs: Arc::new(Mutex::new(HashMap::new())),
-            prompt_queue: Arc::new(Mutex::new(VecDeque::new())),
-            busy_checker: None,
         }
-    }
-
-    /// Create a CronServer with a shared prompt queue that the main session
-    /// loop can drain to get pending cron prompts.
-    pub fn with_prompt_queue(prompt_queue: PromptQueue) -> Self {
-        let mut server = Self::new();
-        server.prompt_queue = prompt_queue;
-        server
-    }
-
-    /// Set the agent-busy checker callback.
-    pub fn with_busy_checker(mut self, checker: AgentBusyChecker) -> Self {
-        self.busy_checker = Some(checker);
-        self
-    }
-
-    /// Get a clone of the prompt queue for external consumption.
-    pub fn prompt_queue(&self) -> PromptQueue {
-        self.prompt_queue.clone()
     }
 
     #[tool(
@@ -254,15 +266,13 @@ impl CronServer {
             parsed,
             cancel_token,
             jobs,
-            self.prompt_queue.clone(),
-            self.busy_checker.clone(),
         );
 
         let result = serde_json::json!({
             "success": true,
             "message": format!("Cron job created: {}", params.schedule),
             "job": info,
-            "note": "This job will inject the prompt into the main agent conversation on each trigger. If the agent is busy, the execution will be skipped."
+            "note": "This job will inject the prompt into the main agent conversation on each trigger. If the agent is busy, the execution will be skipped. Use `cron_get` or `cron_list` MCP tools to check job status — there is no HTTP API."
         });
 
         Ok(CallToolResult::success(vec![Content::text(
@@ -608,7 +618,6 @@ fn get_next_cron_time(
 // Job Executor — Prompt Injection
 // ---------------------------------------------------------------------------
 
-#[allow(clippy::too_many_arguments)]
 fn spawn_job_executor(
     job_id: String,
     prompt: String,
@@ -616,8 +625,6 @@ fn spawn_job_executor(
     schedule: ScheduleKind,
     cancel_token: tokio_util::sync::CancellationToken,
     jobs: JobRegistry,
-    prompt_queue: PromptQueue,
-    busy_checker: Option<AgentBusyChecker>,
 ) {
     tokio::spawn(async move {
         match schedule {
@@ -645,15 +652,7 @@ fn spawn_job_executor(
                     };
 
                     if should_run {
-                        inject_prompt(
-                            &job_id,
-                            &prompt,
-                            cwd.as_deref(),
-                            &jobs,
-                            &prompt_queue,
-                            &busy_checker,
-                        )
-                        .await;
+                        inject_prompt(&job_id, &prompt, cwd.as_deref(), &jobs).await;
                     }
                 }
             }
@@ -685,15 +684,7 @@ fn spawn_job_executor(
                     };
 
                     if should_run {
-                        inject_prompt(
-                            &job_id,
-                            &prompt,
-                            cwd.as_deref(),
-                            &jobs,
-                            &prompt_queue,
-                            &busy_checker,
-                        )
-                        .await;
+                        inject_prompt(&job_id, &prompt, cwd.as_deref(), &jobs).await;
                     }
                 }
             }
@@ -706,22 +697,17 @@ async fn inject_prompt(
     prompt: &str,
     cwd: Option<&str>,
     jobs: &JobRegistry,
-    prompt_queue: &PromptQueue,
-    busy_checker: &Option<AgentBusyChecker>,
 ) {
-    // Check if the agent is busy
-    if let Some(checker) = busy_checker {
-        if checker() {
-            let mut reg = jobs.lock().await;
-            if let Some(job) = reg.get_mut(job_id) {
-                job.info.skip_count += 1;
-                job.info.last_result = Some(CronJobResult {
-                    success: false,
-                    summary: "Skipped: agent is busy processing another request".to_string(),
-                });
-            }
-            return;
+    if is_agent_busy() {
+        let mut reg = jobs.lock().await;
+        if let Some(job) = reg.get_mut(job_id) {
+            job.info.skip_count += 1;
+            job.info.last_result = Some(CronJobResult {
+                success: false,
+                summary: "Skipped: agent is busy processing another request".to_string(),
+            });
         }
+        return;
     }
 
     let schedule = {
@@ -731,18 +717,14 @@ async fn inject_prompt(
             .unwrap_or_default()
     };
 
-    // Push the prompt into the shared queue
-    {
-        let mut queue = prompt_queue.lock().await;
-        queue.push_back(CronPromptEvent {
-            job_id: job_id.to_string(),
-            prompt: prompt.to_string(),
-            cwd: cwd.map(|s| s.to_string()),
-            schedule,
-        });
-    }
+    let channel = get_or_init_channel();
+    let _ = channel.sender.send(CronPromptEvent {
+        job_id: job_id.to_string(),
+        prompt: prompt.to_string(),
+        cwd: cwd.map(|s| s.to_string()),
+        schedule,
+    });
 
-    // Update job metadata
     let now = chrono::Utc::now().to_rfc3339();
     let truncated: String = prompt.chars().take(100).collect();
     let summary = if truncated.len() < prompt.len() {
