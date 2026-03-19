@@ -744,10 +744,11 @@ async fn inject_prompt(
 
     // Update job metadata
     let now = chrono::Utc::now().to_rfc3339();
-    let summary = if prompt.len() > 100 {
-        format!("Prompt injected: \"{}...\"", &prompt[..100])
+    let truncated: String = prompt.chars().take(100).collect();
+    let summary = if truncated.len() < prompt.len() {
+        format!("Prompt injected: \"{truncated}...\"")
     } else {
-        format!("Prompt injected: \"{}\"", prompt)
+        format!("Prompt injected: \"{prompt}\"")
     };
 
     let mut reg = jobs.lock().await;
