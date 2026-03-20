@@ -123,6 +123,8 @@ impl A8eCompleter {
     fn complete_slash_commands(&self, line: &str) -> Result<(usize, Vec<Pair>)> {
         let commands: &[(&str, &str, bool)] = &[
             ("/help", "Show available commands", false),
+            ("/status", "Show session info (cwd, provider, model)", false),
+            ("/model", "Show current model and provider details", false),
             (
                 "/mode",
                 "Set agent mode (auto, approve, chat, smart_approve)",
@@ -407,7 +409,9 @@ impl Hinter for A8eCompleter {
 
         if !line.is_empty() {
             if line == "/" {
-                return Some(" Tab to see commands".to_string());
+                return Some(
+                    " help status model mode plan compact clear exit  (Tab for all)".to_string(),
+                );
             }
             return None;
         }

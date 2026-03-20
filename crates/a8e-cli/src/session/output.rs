@@ -484,11 +484,56 @@ fn render_tool_response(resp: &ToolResponse, theme: Theme, debug: bool) {
                 if debug {
                     println!("{:#?}", content);
                 } else if let Some(text) = content.as_text() {
-                    print_markdown(&text.text, theme);
+                    let show_full = get_show_full_tool_output();
+                    if show_full {
+                        print_markdown(&text.text, theme);
+                    } else {
+                        print_truncated_tool_output(&text.text, theme);
+                    }
                 }
             }
         }
         Err(e) => print_markdown(&e.to_string(), theme),
+    }
+}
+
+const TOOL_OUTPUT_MAX_LINES: usize = 8;
+const TOOL_OUTPUT_MAX_CHARS: usize = 1000;
+
+fn print_truncated_tool_output(text: &str, theme: Theme) {
+    let line_count = text.lines().count();
+    let char_count = text.chars().count();
+
+    if line_count <= TOOL_OUTPUT_MAX_LINES && char_count <= TOOL_OUTPUT_MAX_CHARS {
+        print_markdown(text, theme);
+        return;
+    }
+
+    let truncated: String = text
+        .lines()
+        .take(TOOL_OUTPUT_MAX_LINES)
+        .collect::<Vec<_>>()
+        .join("\n");
+    let truncated = if truncated.chars().count() > TOOL_OUTPUT_MAX_CHARS {
+        safe_truncate(&truncated, TOOL_OUTPUT_MAX_CHARS)
+    } else {
+        truncated
+    };
+
+    print_markdown(&truncated, theme);
+
+    let remaining_lines = line_count.saturating_sub(TOOL_OUTPUT_MAX_LINES);
+    let remaining_chars = char_count.saturating_sub(truncated.chars().count());
+    if remaining_lines > 0 || remaining_chars > 0 {
+        println!(
+            "    {} {}",
+            style("⋯").dim(),
+            style(format!(
+                "{} more lines, {} more chars (/r to show full output)",
+                remaining_lines, remaining_chars,
+            ))
+            .dim()
+        );
     }
 }
 
@@ -1301,6 +1346,124 @@ pub fn display_greeting() {
         style("/help for commands").dim()
     );
     println!();
+}
+
+pub fn render_status_info(
+    session_id: &str,
+    provider: &str,
+    model: &str,
+    mode: &str,
+    extensions: &[String],
+    total_tokens: Option<i32>,
+    context_limit: usize,
+) {
+    println!();
+    println!("  {}", style("Session Status").bold().underlined());
+    println!();
+
+    let cwd_display = std::env::current_dir()
+        .ok()
+        .map(|p| {
+            let path_str = p.display().to_string();
+            if let Ok(home) = etcetera::home_dir() {
+                if let Ok(stripped) = p.strip_prefix(&home) {
+                    return format!("~/{}", stripped.display());
+                }
+            }
+            path_str
+        })
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let rows: &[(&str, String)] = &[
+        ("Session", session_id.to_string()),
+        ("Working dir", cwd_display),
+        ("Provider", provider.to_string()),
+        ("Model", model.to_string()),
+        ("Mode", mode.to_string()),
+        (
+            "Context",
+            format!(
+                "{} / {} tokens",
+                total_tokens.unwrap_or(0),
+                if context_limit > 0 {
+                    format_tokens_short(context_limit)
+                } else {
+                    "unknown".to_string()
+                }
+            ),
+        ),
+        (
+            "Extensions",
+            if extensions.is_empty() {
+                "none".to_string()
+            } else {
+                extensions.join(", ")
+            },
+        ),
+    ];
+
+    for (label, value) in rows {
+        println!(
+            "  {}  {}",
+            style(format!("{:<14}", label)).cyan(),
+            style(value).dim()
+        );
+    }
+    println!();
+}
+
+pub fn render_model_info(
+    provider: &str,
+    model: &str,
+    api_base: Option<&str>,
+    context_limit: usize,
+    cost_input: Option<f64>,
+    cost_output: Option<f64>,
+) {
+    println!();
+    println!("  {}", style("Model Info").bold().underlined());
+    println!();
+
+    println!(
+        "  {}  {}",
+        style(format!("{:<14}", "Provider")).cyan(),
+        style(provider).dim()
+    );
+    println!(
+        "  {}  {}",
+        style(format!("{:<14}", "Model")).cyan(),
+        style(model).dim()
+    );
+    if let Some(base) = api_base {
+        println!(
+            "  {}  {}",
+            style(format!("{:<14}", "API Base")).cyan(),
+            style(base).dim()
+        );
+    }
+    println!(
+        "  {}  {}",
+        style(format!("{:<14}", "Context")).cyan(),
+        style(format_tokens_short(context_limit)).dim()
+    );
+    if let (Some(input), Some(output)) = (cost_input, cost_output) {
+        println!(
+            "  {}  {}",
+            style(format!("{:<14}", "Cost")).cyan(),
+            style(format!("${:.2}/M input · ${:.2}/M output", input, output)).dim()
+        );
+    }
+    println!();
+}
+
+fn format_tokens_short(n: usize) -> String {
+    if n >= 1_000_000 {
+        format!("{:.1}M", n as f64 / 1_000_000.0)
+    } else if n >= 1_000 {
+        format!("{}k", n / 1_000)
+    } else {
+        n.to_string()
+    }
 }
 
 pub fn display_context_usage(total_tokens: usize, context_limit: usize) {

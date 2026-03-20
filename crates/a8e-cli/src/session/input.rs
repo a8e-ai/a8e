@@ -25,6 +25,8 @@ pub enum InputResult {
     Recipe(Option<String>),
     Compact,
     ToggleFullToolOutput,
+    Status,
+    Model,
 }
 
 #[derive(Debug)]
@@ -240,6 +242,8 @@ fn handle_slash_command(input: &str) -> Option<InputResult> {
     const CMD_RECIPE: &str = "/recipe";
     const CMD_COMPACT: &str = "/compact";
     const CMD_SUMMARIZE_DEPRECATED: &str = "/summarize";
+    const CMD_STATUS: &str = "/status";
+    const CMD_MODEL: &str = "/model";
 
     match input {
         "/exit" | "/quit" => Some(InputResult::Exit),
@@ -316,6 +320,8 @@ fn handle_slash_command(input: &str) -> Option<InputResult> {
             Some(InputResult::Compact)
         }
         "/r" => Some(InputResult::ToggleFullToolOutput),
+        s if s == CMD_STATUS => Some(InputResult::Status),
+        s if s == CMD_MODEL => Some(InputResult::Model),
         _ => None,
     }
 }
@@ -427,6 +433,8 @@ fn print_help() {
 
     let commands: &[(&str, &str)] = &[
         ("/help, /?", "Show this help message"),
+        ("/status", "Show session info: cwd, provider, model, etc."),
+        ("/model", "Show current model and provider details"),
         (
             "/mode <name>",
             "Set mode: auto, approve, chat, smart_approve",

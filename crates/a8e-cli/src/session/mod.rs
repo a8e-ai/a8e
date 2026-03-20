@@ -596,6 +596,66 @@ impl CliSession {
         );
     }
 
+    async fn handle_status(&self) -> Result<()> {
+        let config = Config::global();
+        let provider_name = config
+            .get_a8e_provider()
+            .unwrap_or_else(|_| "unknown".to_string());
+        let model_name = config
+            .get_a8e_model()
+            .unwrap_or_else(|_| "unknown".to_string());
+        let mode = config.get_a8e_mode().unwrap_or(A8eMode::Auto);
+
+        let extensions = self.agent.list_extensions().await;
+        let provider = self.agent.provider().await?;
+        let model_config = provider.get_model_config();
+        let context_limit = model_config.context_limit();
+        let total_tokens = self.get_total_token_usage().await.unwrap_or(None);
+
+        output::render_status_info(
+            &self.session_id,
+            &provider_name,
+            &model_name,
+            &format!("{:?}", mode),
+            &extensions,
+            total_tokens,
+            context_limit,
+        );
+        Ok(())
+    }
+
+    async fn handle_model_info(&self) -> Result<()> {
+        let config = Config::global();
+        let provider_name = config
+            .get_a8e_provider()
+            .unwrap_or_else(|_| "unknown".to_string());
+        let model_name = config
+            .get_a8e_model()
+            .unwrap_or_else(|_| "unknown".to_string());
+
+        let provider = self.agent.provider().await?;
+        let model_config = provider.get_model_config();
+        let context_limit = model_config.context_limit();
+
+        let api_base = config.get_param::<String>("A8E_API_BASE").ok();
+
+        let canonical =
+            a8e_core::providers::canonical::maybe_get_canonical_model(&provider_name, &model_name);
+        let (cost_input, cost_output) = canonical
+            .map(|c| (c.cost.input, c.cost.output))
+            .unwrap_or((None, None));
+
+        output::render_model_info(
+            &provider_name,
+            &model_name,
+            api_base.as_deref(),
+            context_limit,
+            cost_input,
+            cost_output,
+        );
+        Ok(())
+    }
+
     fn handle_toggle_full_tool_output(&self) {
         let enabled = output::toggle_full_tool_output();
         if enabled {
@@ -1393,6 +1453,8 @@ impl CliSession {
             InputResult::PromptCommand(opts) => self.handle_prompt_command(opts).await?,
             InputResult::Recipe(filepath_opt) => self.handle_recipe(filepath_opt).await,
             InputResult::Compact => self.handle_compact().await?,
+            InputResult::Status => self.handle_status().await?,
+            InputResult::Model => self.handle_model_info().await?,
             InputResult::Exit | InputResult::Retry => {}
         }
         Ok(())
