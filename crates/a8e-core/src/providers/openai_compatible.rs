@@ -242,12 +242,17 @@ pub fn stream_openai_compat(
 
         let message_stream = response_to_streaming_message(framed);
         pin!(message_stream);
+        let mut chunk_count = 0usize;
         while let Some(message) = message_stream.next().await {
             let (message, usage) = message.map_err(|e|
                 ProviderError::RequestFailed(format!("Stream decode error: {}", e))
             )?;
+            chunk_count += 1;
             log.write(&message, usage.as_ref().map(|f| f.usage).as_ref())?;
             yield (message, usage);
+        }
+        if chunk_count == 0 {
+            tracing::warn!("SSE stream completed without yielding any chunks");
         }
     }))
 }

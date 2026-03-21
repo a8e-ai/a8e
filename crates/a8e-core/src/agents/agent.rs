@@ -1532,6 +1532,14 @@ impl Agent {
                         }
                     } else if did_recovery_compact_this_iteration {
                         // Avoid setting exit_chat; continue from last user message in the conversation
+                    } else if messages_to_add.is_empty() && last_assistant_text.is_empty() {
+                        warn!("LLM returned an empty response with no content or tool calls");
+                        yield AgentEvent::Message(
+                            Message::assistant().with_text(
+                                "No response received from the model. This may be a transient issue — please try again."
+                            )
+                        );
+                        exit_chat = true;
                     } else {
                         match self.handle_retry_logic(&mut conversation, &session_config, &initial_messages).await {
                             Ok(should_retry) => {

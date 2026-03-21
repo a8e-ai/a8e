@@ -414,6 +414,15 @@ impl RequestLog {
             let logs_dir = Paths::in_state_dir("logs");
             let log_path = |i| logs_dir.join(format!("llm_request.{}.jsonl", i));
 
+            let lock_path = logs_dir.join(".llm_log_rotation.lock");
+            let lock_file = File::options()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&lock_path)?;
+            use fs2::FileExt;
+            let _lock = lock_file.lock_exclusive();
+
             for i in (0..LOGS_TO_KEEP - 1).rev() {
                 let _ = std::fs::rename(log_path(i), log_path(i + 1));
             }
