@@ -334,6 +334,10 @@ pub async fn handle_wechat_start() -> Result<()> {
         "\n{} Starting a8e WeChat channel",
         console::style("∞").magenta().bold()
     );
+    println!(
+        "   {} WeChat channel connected",
+        console::style("💬").bold()
+    );
     println!("   Provider: {} | Model: {}", provider_name, model);
     println!("   Account: {}", account_id);
     println!(
@@ -397,7 +401,14 @@ pub async fn handle_wechat_start() -> Result<()> {
                     }
 
                     let name = sender.split('@').next().unwrap_or(sender);
-                    eprintln!("[wechat] Message from {}: {}", name, &text[..text.len().min(80)]);
+                    let preview_end = text.len().min(80);
+                    let preview: &str = &text[..preview_end];
+                    eprintln!(
+                        "[wechat] 💬 ← {}: {}{}",
+                        name,
+                        preview,
+                        if text.len() > 80 { "..." } else { "" }
+                    );
 
                     let session_manager = agent.config.session_manager.clone();
                     let session = session_manager
@@ -430,20 +441,36 @@ pub async fn handle_wechat_start() -> Result<()> {
                                             }
                                         }
                                     }
+                                    Ok(AgentEvent::McpNotification((server, _))) => {
+                                        eprintln!("[wechat]   🔧 MCP: {server}");
+                                    }
+                                    Ok(AgentEvent::ModelChange { model: m, mode }) => {
+                                        eprintln!("[wechat]   ⚙ Model: {m} ({mode})");
+                                    }
                                     Ok(_) => {}
                                     Err(e) => {
-                                        eprintln!("[wechat] Agent error: {e}");
+                                        eprintln!("[wechat]   ✗ Agent error: {e}");
                                         break;
                                     }
                                 }
                             }
                         }
                         Err(e) => {
+                            eprintln!("[wechat]   ✗ Error: {e}");
                             full_content = format!("Error: {e}");
                         }
                     }
 
                     if !full_content.is_empty() {
+                        let resp_end = full_content.len().min(100);
+                        let resp_preview: &str = &full_content[..resp_end];
+                        eprintln!(
+                            "[wechat] 💬 → {}: {}{}",
+                            name,
+                            resp_preview,
+                            if full_content.len() > 100 { "..." } else { "" }
+                        );
+
                         if let Some(ctx) = ctx_cache.get(sender) {
                             for chunk in chunk_text(&full_content, MAX_MSG_CHUNK) {
                                 if let Err(e) =
@@ -452,6 +479,7 @@ pub async fn handle_wechat_start() -> Result<()> {
                                     eprintln!("[wechat] Send error: {e}");
                                 }
                             }
+                            eprintln!("[wechat] ✓ Reply sent to {name}");
                         }
                     }
                 }
