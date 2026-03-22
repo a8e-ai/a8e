@@ -1104,6 +1104,8 @@ impl Agent {
             let max_turns = session_config.max_turns.unwrap_or(DEFAULT_MAX_TURNS);
             let mut compaction_attempts = 0;
             let mut last_assistant_text = String::new();
+            let mut empty_response_retries = 0u32;
+            const MAX_EMPTY_RESPONSE_RETRIES: u32 = 2;
 
             loop {
                 if is_token_cancelled(&cancel_token) {
@@ -1533,13 +1535,31 @@ impl Agent {
                     } else if did_recovery_compact_this_iteration {
                         // Avoid setting exit_chat; continue from last user message in the conversation
                     } else if messages_to_add.is_empty() && last_assistant_text.is_empty() {
-                        warn!("LLM returned an empty response with no content or tool calls");
-                        yield AgentEvent::Message(
-                            Message::assistant().with_text(
-                                "No response received from the model. This may be a transient issue — please try again."
-                            )
-                        );
-                        exit_chat = true;
+                        empty_response_retries += 1;
+                        if empty_response_retries <= MAX_EMPTY_RESPONSE_RETRIES {
+                            warn!(
+                                "LLM returned an empty response (attempt {}/{}), retrying",
+                                empty_response_retries, MAX_EMPTY_RESPONSE_RETRIES
+                            );
+                            yield AgentEvent::Message(
+                                Message::assistant().with_system_notification(
+                                    SystemNotificationType::ThinkingMessage,
+                                    format!(
+                                        "Empty response from model — retrying ({}/{})…",
+                                        empty_response_retries, MAX_EMPTY_RESPONSE_RETRIES
+                                    ),
+                                )
+                            );
+                            // Continue the loop to retry the same request
+                        } else {
+                            warn!("LLM returned an empty response after {} retries", MAX_EMPTY_RESPONSE_RETRIES);
+                            yield AgentEvent::Message(
+                                Message::assistant().with_text(
+                                    "No response received from the model after multiple attempts. This may be caused by the prompt content, tool definitions, or upstream provider limitations. Try simplifying your request, using /compact, or switching to a different model with /model."
+                                )
+                            );
+                            exit_chat = true;
+                        }
                     } else {
                         match self.handle_retry_logic(&mut conversation, &session_config, &initial_messages).await {
                             Ok(should_retry) => {

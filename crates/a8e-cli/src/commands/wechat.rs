@@ -287,10 +287,7 @@ pub async fn handle_wechat_setup() -> Result<()> {
                     .ok_or_else(|| anyhow::anyhow!("Missing ilink_bot_id"))?;
                 let base = status.baseurl.unwrap_or_else(|| base_url.to_string());
 
-                println!(
-                    "\n{} WeChat connected!",
-                    console::style("✓").green().bold()
-                );
+                println!("\n{} WeChat connected!", console::style("✓").green().bold());
                 println!("  Account: {}", account_id);
                 println!();
                 println!(
@@ -494,10 +491,7 @@ pub async fn handle_wechat_status() -> Result<()> {
             let account = std::env::var("A8E_WECHAT_ACCOUNT_ID").unwrap_or_else(|_| "N/A".into());
             let base = std::env::var("A8E_WECHAT_BASE_URL")
                 .unwrap_or_else(|_| DEFAULT_BASE_URL.to_string());
-            println!(
-                "{} WeChat: Configured",
-                console::style("✓").green().bold()
-            );
+            println!("{} WeChat: Configured", console::style("✓").green().bold());
             println!("  Account: {}", account);
             println!("  Base URL: {}", base);
         }

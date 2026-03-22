@@ -656,6 +656,52 @@ impl CliSession {
         Ok(())
     }
 
+    async fn handle_switch_model(&mut self, model_name: &str) -> Result<()> {
+        let config = Config::global();
+        let provider_name = config
+            .get_a8e_provider()
+            .unwrap_or_else(|_| "unknown".to_string());
+
+        println!(
+            "  {} switching model to {}…",
+            console::style("⟳").cyan(),
+            console::style(model_name).cyan().bold()
+        );
+
+        let extensions = a8e_core::config::extensions::get_enabled_extensions_with_config(config);
+        match a8e_core::providers::create_with_named_model(&provider_name, model_name, extensions)
+            .await
+        {
+            Ok(new_provider) => {
+                config.set_a8e_model(model_name.to_string())?;
+
+                self.agent
+                    .update_provider(new_provider, &self.session_id)
+                    .await?;
+
+                println!(
+                    "  {} model switched to {}",
+                    console::style("✓").green(),
+                    console::style(model_name).cyan().bold()
+                );
+            }
+            Err(e) => {
+                output::render_error(&format!("Failed to switch model: {}", e));
+
+                let provider = self.agent.provider().await?;
+                let supported = provider.fetch_supported_models().await;
+                if let Ok(models) = supported {
+                    println!(
+                        "  {} available models: {}",
+                        console::style("ℹ").blue(),
+                        models.join(", ")
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn handle_toggle_full_tool_output(&self) {
         let enabled = output::toggle_full_tool_output();
         if enabled {
@@ -1460,6 +1506,7 @@ impl CliSession {
             InputResult::Compact => self.handle_compact().await?,
             InputResult::Status => self.handle_status().await?,
             InputResult::Model => self.handle_model_info().await?,
+            InputResult::SwitchModel(model_name) => self.handle_switch_model(&model_name).await?,
             InputResult::Exit | InputResult::Retry => {}
         }
         Ok(())

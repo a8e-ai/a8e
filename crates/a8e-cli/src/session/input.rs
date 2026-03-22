@@ -27,6 +27,7 @@ pub enum InputResult {
     ToggleFullToolOutput,
     Status,
     Model,
+    SwitchModel(String),
 }
 
 #[derive(Debug)]
@@ -322,6 +323,14 @@ fn handle_slash_command(input: &str) -> Option<InputResult> {
         "/r" => Some(InputResult::ToggleFullToolOutput),
         s if s == CMD_STATUS => Some(InputResult::Status),
         s if s == CMD_MODEL => Some(InputResult::Model),
+        s if s.starts_with("/model ") => {
+            let model_name = s.strip_prefix("/model ").unwrap_or("").trim();
+            if model_name.is_empty() {
+                Some(InputResult::Model)
+            } else {
+                Some(InputResult::SwitchModel(model_name.to_string()))
+            }
+        }
         _ => None,
     }
 }
@@ -434,7 +443,10 @@ fn print_help() {
     let commands: &[(&str, &str)] = &[
         ("/help, /?", "Show this help message"),
         ("/status", "Show session info: cwd, provider, model, etc."),
-        ("/model", "Show current model and provider details"),
+        (
+            "/model [name]",
+            "Show or switch model (e.g. /model glm-4.7)",
+        ),
         (
             "/mode <name>",
             "Set mode: auto, approve, chat, smart_approve",
@@ -574,6 +586,22 @@ mod tests {
         } else {
             panic!("Expected AddBuiltin");
         }
+
+        // Test model commands
+        assert!(matches!(
+            handle_slash_command("/model"),
+            Some(InputResult::Model)
+        ));
+        if let Some(InputResult::SwitchModel(name)) = handle_slash_command("/model glm-4.7") {
+            assert_eq!(name, "glm-4.7");
+        } else {
+            panic!("Expected SwitchModel");
+        }
+        // /model with empty name after space falls back to show info
+        assert!(matches!(
+            handle_slash_command("/model   "),
+            Some(InputResult::Model)
+        ));
 
         // Test unknown commands
         assert!(handle_slash_command("/unknown").is_none());
