@@ -36,7 +36,10 @@ pub fn canonical_name(provider: &str, model: &str) -> String {
 }
 
 fn is_meta_provider(provider: &str) -> bool {
-    matches!(provider, "databricks" | "tetrate" | "bedrock" | "azure")
+    matches!(
+        provider,
+        "databricks" | "tetrate" | "bedrock" | "azure" | "paean_ai"
+    )
 }
 
 fn map_provider_name(provider: &str) -> &str {

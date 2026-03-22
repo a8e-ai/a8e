@@ -4,7 +4,7 @@ use futures::future::BoxFuture;
 use serde_json::Value;
 
 use super::api_client::{ApiClient, AuthMethod};
-use super::base::{ConfigKey, MessageStream, Provider, ProviderDef, ProviderMetadata};
+use super::base::{ConfigKey, MessageStream, ModelInfo, Provider, ProviderDef, ProviderMetadata};
 use super::errors::ProviderError;
 use super::openai_compatible::{handle_status_openai_compat, stream_openai_compat};
 use super::retry::ProviderRetry;
@@ -18,20 +18,20 @@ const PAEAN_AI_PROVIDER_NAME: &str = "paean_ai";
 pub const PAEAN_AI_DEFAULT_MODEL: &str = "gemini-3.1-flash-lite-preview";
 pub const PAEAN_AI_DEFAULT_FAST_MODEL: &str = "gemini-3.1-flash-lite-preview";
 
-pub const PAEAN_AI_KNOWN_MODELS: &[&str] = &[
-    // Google Gemini 3.1 Preview
-    "gemini-3.1-flash-lite-preview",
-    "gemini-3.1-pro-preview",
-    // Google Gemini 3 Preview
-    "gemini-3-flash-preview",
-    // ZhipuAI GLM — optimised for coding tasks (lowercase to match DashScope API)
-    "glm-4.7",
-    "glm-4.6",
-    "glm-4.5",
-    "glm-4.5-air",
-    // Anthropic Claude via Google Vertex AI
-    "claude-sonnet-4-6",
-    "claude-opus-4-6",
+pub const PAEAN_AI_KNOWN_MODELS: &[(&str, usize)] = &[
+    // Google Gemini 3.1 Preview (1M context)
+    ("gemini-3.1-flash-lite-preview", 1_048_576),
+    ("gemini-3.1-pro-preview", 1_048_576),
+    // Google Gemini 3 Preview (1M context)
+    ("gemini-3-flash-preview", 1_048_576),
+    // ZhipuAI GLM — optimised for coding tasks
+    ("glm-4.7", 200_000),
+    ("glm-4.6", 200_000),
+    ("glm-4.5", 128_000),
+    ("glm-4.5-air", 128_000),
+    // Anthropic Claude via Google Vertex AI (200k context)
+    ("claude-sonnet-4-6", 200_000),
+    ("claude-opus-4-6", 200_000),
 ];
 pub const PAEAN_AI_DOC_URL: &str = "https://api.paean.ai";
 
@@ -45,8 +45,21 @@ pub struct PaeanAiProvider {
     name: String,
 }
 
+fn lookup_known_model_limit(model_name: &str) -> Option<usize> {
+    PAEAN_AI_KNOWN_MODELS
+        .iter()
+        .find(|(name, _)| *name == model_name)
+        .map(|(_, limit)| *limit)
+}
+
 impl PaeanAiProvider {
     pub async fn from_env(model: ModelConfig) -> Result<Self> {
+        let known_limit = lookup_known_model_limit(&model.model_name);
+        let model = if model.context_limit.is_none() {
+            model.with_context_limit(known_limit)
+        } else {
+            model
+        };
         let model = model.with_fast(PAEAN_AI_DEFAULT_FAST_MODEL, PAEAN_AI_PROVIDER_NAME)?;
 
         let config = crate::config::Config::global();
@@ -71,12 +84,16 @@ impl ProviderDef for PaeanAiProvider {
     type Provider = Self;
 
     fn metadata() -> ProviderMetadata {
-        ProviderMetadata::new(
+        let models = PAEAN_AI_KNOWN_MODELS
+            .iter()
+            .map(|(name, limit)| ModelInfo::new(*name, *limit))
+            .collect();
+        ProviderMetadata::with_models(
             PAEAN_AI_PROVIDER_NAME,
             "Paean AI",
             "Curated coding models: GLM, Claude (Vertex), Gemini 3",
             PAEAN_AI_DEFAULT_MODEL,
-            PAEAN_AI_KNOWN_MODELS.to_vec(),
+            models,
             PAEAN_AI_DOC_URL,
             vec![
                 ConfigKey::new("PAEAN_AI_API_KEY", true, true, None, true),
