@@ -584,14 +584,15 @@ where
                 let mut tool_call_data: ToolCallData = HashMap::new();
 
                 if let Some(tool_calls) = &chunk.choices[0].delta.tool_calls {
-                    for tool_call in tool_calls {
-                        if let (Some(index), Some(id), Some(name)) = (tool_call.index, &tool_call.id, &tool_call.function.name) {
+                    for (idx, tool_call) in tool_calls.iter().enumerate() {
+                        let index = tool_call.index.unwrap_or(idx as i32);
+                        if let (Some(id), Some(name)) = (&tool_call.id, &tool_call.function.name) {
                             tool_call_data.insert(index, (id.clone(), name.clone(), tool_call.function.arguments.clone(), tool_call.extra.clone()));
                         }
                     }
                 }
 
-                let is_complete = chunk.choices[0].finish_reason == Some("tool_calls".to_string());
+                let is_complete = chunk.choices[0].finish_reason.is_some();
 
                 if !is_complete {
                     let mut done = false;
@@ -618,20 +619,19 @@ where
                                         accumulated_reasoning_content.push_str(rc);
                                     }
                                     if let Some(delta_tool_calls) = &tool_chunk.choices[0].delta.tool_calls {
-                                        for delta_call in delta_tool_calls {
-                                            if let Some(index) = delta_call.index {
-                                                if let Some((_, _, ref mut args, ref mut extra)) = tool_call_data.get_mut(&index) {
-                                                    args.push_str(&delta_call.function.arguments);
-                                                    if extra.is_none() && delta_call.extra.is_some() {
-                                                        *extra = delta_call.extra.clone();
-                                                    } else if let (Some(existing), Some(new_extra)) = (extra.as_mut(), &delta_call.extra) {
-                                                        for (key, value) in new_extra {
-                                                            existing.entry(key.clone()).or_insert(value.clone());
-                                                        }
+                                        for (idx, delta_call) in delta_tool_calls.iter().enumerate() {
+                                            let index = delta_call.index.unwrap_or(idx as i32);
+                                            if let Some((_, _, ref mut args, ref mut extra)) = tool_call_data.get_mut(&index) {
+                                                args.push_str(&delta_call.function.arguments);
+                                                if extra.is_none() && delta_call.extra.is_some() {
+                                                    *extra = delta_call.extra.clone();
+                                                } else if let (Some(existing), Some(new_extra)) = (extra.as_mut(), &delta_call.extra) {
+                                                    for (key, value) in new_extra {
+                                                        existing.entry(key.clone()).or_insert(value.clone());
                                                     }
-                                                } else if let (Some(id), Some(name)) = (&delta_call.id, &delta_call.function.name) {
-                                                    tool_call_data.insert(index, (id.clone(), name.clone(), delta_call.function.arguments.clone(), delta_call.extra.clone()));
                                                 }
+                                            } else if let (Some(id), Some(name)) = (&delta_call.id, &delta_call.function.name) {
+                                                tool_call_data.insert(index, (id.clone(), name.clone(), delta_call.function.arguments.clone(), delta_call.extra.clone()));
                                             }
                                         }
                                     }
