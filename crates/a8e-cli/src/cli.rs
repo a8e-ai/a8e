@@ -495,14 +495,25 @@ fn parse_key_val(s: &str) -> Result<(String, String), String> {
 
 #[derive(Subcommand)]
 enum WechatCommand {
-    /// Authenticate with WeChat via QR code
-    #[command(about = "Authenticate with WeChat via QR code")]
+    /// Step 1: Authenticate with WeChat via QR code scan
+    #[command(
+        about = "Authenticate with WeChat via QR code",
+        long_about = "Scan a QR code with WeChat to obtain authentication credentials.\n\
+            After login, the command prints environment variables to export.\n\n\
+            Next step: export the variables, then run 'a8e wechat start'."
+    )]
     Setup,
-    /// Start listening for WeChat messages
-    #[command(about = "Start listening for WeChat messages")]
+    /// Step 2: Start the agent with WeChat channel active
+    #[command(
+        about = "Start the agent with WeChat channel active",
+        long_about = "Start the a8e agent and listen for WeChat messages.\n\
+            Requires A8E_WECHAT_TOKEN, A8E_WECHAT_BASE_URL, and\n\
+            A8E_WECHAT_ACCOUNT_ID environment variables.\n\n\
+            Run 'a8e wechat setup' first to obtain these credentials."
+    )]
     Start,
     /// Show WeChat configuration status
-    #[command(about = "Show WeChat configuration status")]
+    #[command(about = "Show WeChat configuration and credential status")]
     Status,
 }
 
@@ -897,10 +908,12 @@ enum Command {
         about = "WeChat channel for bridging WeChat messages to local agent",
         long_about = "Connect WeChat to the local a8e agent.\n\
             Messages received via WeChat are processed by the agent and replies are sent back.\n\n\
-            Setup:\n  \
-            a8e wechat setup    # QR code login\n  \
-            a8e wechat start    # Start listening\n  \
-            a8e wechat status   # Check configuration"
+            Workflow:\n  \
+            a8e wechat setup     Authenticate with WeChat (scan QR code)\n  \
+            a8e wechat start     Start the agent with WeChat channel active\n  \
+            a8e wechat status    Check configuration and login status\n\n\
+            After running setup, export the environment variables it prints,\n\
+            then use 'a8e wechat start' to begin listening for messages."
     )]
     Wechat {
         #[command(subcommand)]

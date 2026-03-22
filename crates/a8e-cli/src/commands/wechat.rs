@@ -293,12 +293,20 @@ pub async fn handle_wechat_setup() -> Result<()> {
                 );
                 println!("  Account: {}", account_id);
                 println!();
-                println!("Add these to your environment or config:");
-                println!("  A8E_WECHAT_TOKEN={}", token);
-                println!("  A8E_WECHAT_BASE_URL={}", base);
-                println!("  A8E_WECHAT_ACCOUNT_ID={}", account_id);
+                println!(
+                    "{} Add these to your environment (e.g. ~/.zshrc or .env):",
+                    console::style("→").cyan()
+                );
                 println!();
-                println!("Then start with: a8e wechat start");
+                println!("  export A8E_WECHAT_TOKEN={}", token);
+                println!("  export A8E_WECHAT_BASE_URL={}", base);
+                println!("  export A8E_WECHAT_ACCOUNT_ID={}", account_id);
+                println!();
+                println!(
+                    "{} Then start the WeChat channel:",
+                    console::style("→").cyan()
+                );
+                println!("  a8e wechat start");
                 return Ok(());
             }
             _ => {}
