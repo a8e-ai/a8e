@@ -182,15 +182,17 @@ fn chunk_text(s: &str, max: usize) -> Vec<&str> {
     let mut chunks = Vec::new();
     let mut start = 0;
     while start < s.len() {
-        let end = (start + max).min(s.len());
+        let end = s.floor_char_boundary((start + max).min(s.len()));
         let end = if end < s.len() {
-            s[start..end]
-                .rfind(char::is_whitespace)
+            s.get(start..end)
+                .and_then(|sub| sub.rfind(char::is_whitespace))
                 .map_or(end, |p| start + p + 1)
         } else {
             end
         };
-        chunks.push(&s[start..end]);
+        if let Some(chunk) = s.get(start..end) {
+            chunks.push(chunk);
+        }
         start = end;
     }
     chunks
@@ -363,7 +365,7 @@ pub async fn handle_wechat_start() -> Result<()> {
             }
             Ok(resp) => {
                 let is_err =
-                    resp.ret.map_or(false, |r| r != 0) || resp.errcode.map_or(false, |e| e != 0);
+                    resp.ret.is_some_and(|r| r != 0) || resp.errcode.is_some_and(|e| e != 0);
                 if is_err {
                     failures += 1;
                     eprintln!(
@@ -398,8 +400,8 @@ pub async fn handle_wechat_start() -> Result<()> {
                     }
 
                     let name = sender.split('@').next().unwrap_or(sender);
-                    let preview_end = text.len().min(80);
-                    let preview: &str = &text[..preview_end];
+                    let preview_end = text.floor_char_boundary(80);
+                    let preview: &str = text.get(..preview_end).unwrap_or(&text);
                     eprintln!(
                         "[wechat] 💬 ← {}: {}{}",
                         name,
@@ -459,8 +461,9 @@ pub async fn handle_wechat_start() -> Result<()> {
                     }
 
                     if !full_content.is_empty() {
-                        let resp_end = full_content.len().min(100);
-                        let resp_preview: &str = &full_content[..resp_end];
+                        let resp_end = full_content.floor_char_boundary(100);
+                        let resp_preview: &str =
+                            full_content.get(..resp_end).unwrap_or(&full_content);
                         eprintln!(
                             "[wechat] 💬 → {}: {}{}",
                             name,
