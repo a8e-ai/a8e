@@ -40,16 +40,19 @@ pub const OPEN_AI_DEFAULT_FAST_MODEL: &str = "gpt-4o-mini";
 pub const OPEN_AI_KNOWN_MODELS: &[(&str, usize)] = &[
     ("gpt-4o", 128_000),
     ("gpt-4o-mini", 128_000),
-    ("gpt-4.1", 128_000),
-    ("gpt-4.1-mini", 128_000),
+    ("gpt-4.1", 1_047_576),
+    ("gpt-4.1-mini", 1_047_576),
     ("o1", 200_000),
     ("o3", 200_000),
+    ("o4-mini", 200_000),
     ("gpt-3.5-turbo", 16_385),
     ("gpt-4-turbo", 128_000),
-    ("o4-mini", 128_000),
+    ("gpt-5", 400_000),
     ("gpt-5-nano", 400_000),
-    ("gpt-5.1-codex", 400_000),
     ("gpt-5-codex", 400_000),
+    ("gpt-5.1-codex", 400_000),
+    ("gpt-5.2-codex", 400_000),
+    ("codex-mini", 200_000),
 ];
 
 pub const OPEN_AI_DOC_URL: &str = "https://platform.openai.com/docs/models";
