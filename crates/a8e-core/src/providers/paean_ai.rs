@@ -24,11 +24,11 @@ pub const PAEAN_AI_KNOWN_MODELS: &[&str] = &[
     "gemini-3.1-pro-preview",
     // Google Gemini 3 Preview
     "gemini-3-flash-preview",
-    // ZhipuAI GLM — optimised for coding tasks
-    "GLM-4.7",
-    "GLM-4.6",
-    "GLM-4.5",
-    "GLM-4.5-Air",
+    // ZhipuAI GLM — optimised for coding tasks (lowercase to match DashScope API)
+    "glm-4.7",
+    "glm-4.6",
+    "glm-4.5",
+    "glm-4.5-air",
     // Anthropic Claude via Google Vertex AI
     "claude-sonnet-4-6",
     "claude-opus-4-6",

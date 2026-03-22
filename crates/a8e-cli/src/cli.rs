@@ -494,6 +494,19 @@ fn parse_key_val(s: &str) -> Result<(String, String), String> {
 }
 
 #[derive(Subcommand)]
+enum WechatCommand {
+    /// Authenticate with WeChat via QR code
+    #[command(about = "Authenticate with WeChat via QR code")]
+    Setup,
+    /// Start listening for WeChat messages
+    #[command(about = "Start listening for WeChat messages")]
+    Start,
+    /// Show WeChat configuration status
+    #[command(about = "Show WeChat configuration status")]
+    Status,
+}
+
+#[derive(Subcommand)]
 enum SessionCommand {
     #[command(about = "List all available sessions")]
     List {
@@ -879,6 +892,21 @@ enum Command {
         no_auth: bool,
     },
 
+    /// WeChat channel — bridge WeChat messages to local agent
+    #[command(
+        about = "WeChat channel for bridging WeChat messages to local agent",
+        long_about = "Connect WeChat to the local a8e agent.\n\
+            Messages received via WeChat are processed by the agent and replies are sent back.\n\n\
+            Setup:\n  \
+            a8e wechat setup    # QR code login\n  \
+            a8e wechat start    # Start listening\n  \
+            a8e wechat status   # Check configuration"
+    )]
+    Wechat {
+        #[command(subcommand)]
+        command: WechatCommand,
+    },
+
     /// Update the a8e CLI version
     #[command(about = "Update the a8e CLI version")]
     Update {
@@ -1055,6 +1083,7 @@ fn get_command_name(command: &Option<Command>) -> &'static str {
         Some(Command::Run { .. }) => "run",
         Some(Command::Schedule { .. }) => "schedule",
         Some(Command::Gateway { .. }) => "gateway",
+        Some(Command::Wechat { .. }) => "wechat",
         Some(Command::Update { .. }) => "update",
         Some(Command::Recipe { .. }) => "recipe",
         Some(Command::Web { .. }) => "web",
@@ -1624,6 +1653,11 @@ pub async fn cli() -> anyhow::Result<()> {
             auth_token,
             no_auth,
         }) => crate::commands::gateway::handle_gateway(port, host, auth_token, no_auth).await,
+        Some(Command::Wechat { command }) => match command {
+            WechatCommand::Setup => crate::commands::wechat::handle_wechat_setup().await,
+            WechatCommand::Start => crate::commands::wechat::handle_wechat_start().await,
+            WechatCommand::Status => crate::commands::wechat::handle_wechat_status().await,
+        },
         Some(Command::Update {
             canary,
             reconfigure,

@@ -66,11 +66,13 @@ struct StreamingChoice {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct StreamingChunk {
+    #[serde(default)]
     choices: Vec<StreamingChoice>,
     created: Option<i64>,
     id: Option<String>,
     usage: Option<Value>,
     model: Option<String>,
+    error: Option<Value>,
 }
 
 pub fn format_messages(messages: &[Message], image_format: &ImageFormat) -> Vec<Value> {
@@ -558,6 +560,12 @@ where
             let chunk: StreamingChunk = serde_json::from_str(line
                 .ok_or_else(|| anyhow!("unexpected stream format"))?)
                 .map_err(|e| anyhow!("Failed to parse streaming chunk: {}: {:?}", e, &line))?;
+
+            if let Some(ref error) = chunk.error {
+                let msg = error.get("message").and_then(|m| m.as_str())
+                    .unwrap_or_else(|| "unknown upstream error");
+                Err(anyhow!("Upstream error in SSE stream: {}", msg))?;
+            }
 
             if !chunk.choices.is_empty() {
                 if let Some(details) = &chunk.choices[0].delta.reasoning_details {

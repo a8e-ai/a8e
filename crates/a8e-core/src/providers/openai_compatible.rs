@@ -253,6 +253,9 @@ pub fn stream_openai_compat(
         }
         if chunk_count == 0 {
             tracing::warn!("SSE stream completed without yielding any chunks");
+            Err(ProviderError::RequestFailed(
+                "Server returned an empty response (0 SSE chunks). This typically indicates an upstream provider issue, rate limiting, or an unsupported request format.".to_string()
+            ))?;
         }
     }))
 }
