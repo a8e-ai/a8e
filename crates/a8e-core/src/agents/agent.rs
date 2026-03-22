@@ -1505,6 +1505,22 @@ impl Agent {
                         Err(ref provider_err) => {
                             crate::posthog::emit_error(provider_err.telemetry_type(), &provider_err.to_string());
                             error!("Error: {}", provider_err);
+
+                            {
+                                let config = Config::global();
+                                let diag_model = config.get_a8e_model().unwrap_or_else(|_| "unknown".into());
+                                let diag_provider = config.get_a8e_provider().unwrap_or_else(|_| "unknown".into());
+                                let msgs_json = serde_json::to_value(conversation.messages()).unwrap_or_default();
+                                crate::utils::log_abnormal_response(
+                                    &session_config.id,
+                                    &diag_model,
+                                    &diag_provider,
+                                    &msgs_json,
+                                    &format!("provider error: {}", provider_err),
+                                    0,
+                                );
+                            }
+
                             yield AgentEvent::Message(
                                 Message::assistant().with_text(
                                     format!("Ran into this error: {provider_err}.\n\nPlease retry if you think this is a transient or recoverable error.")
@@ -1536,6 +1552,23 @@ impl Agent {
                         // Avoid setting exit_chat; continue from last user message in the conversation
                     } else if messages_to_add.is_empty() && last_assistant_text.is_empty() {
                         empty_response_retries += 1;
+
+                        // Log diagnostic data for every empty response occurrence
+                        {
+                            let config = Config::global();
+                            let diag_model = config.get_a8e_model().unwrap_or_else(|_| "unknown".into());
+                            let diag_provider = config.get_a8e_provider().unwrap_or_else(|_| "unknown".into());
+                            let msgs_json = serde_json::to_value(conversation.messages()).unwrap_or_default();
+                            crate::utils::log_abnormal_response(
+                                &session_config.id,
+                                &diag_model,
+                                &diag_provider,
+                                &msgs_json,
+                                &format!("empty response, attempt {}/{}", empty_response_retries, MAX_EMPTY_RESPONSE_RETRIES),
+                                empty_response_retries,
+                            );
+                        }
+
                         if empty_response_retries <= MAX_EMPTY_RESPONSE_RETRIES {
                             warn!(
                                 "LLM returned an empty response (attempt {}/{}), retrying",

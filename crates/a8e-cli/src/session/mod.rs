@@ -653,6 +653,48 @@ impl CliSession {
             cost_input,
             cost_output,
         );
+
+        println!();
+        println!(
+            "  {} fetching available models…",
+            console::style("⟳").cyan()
+        );
+        match provider.fetch_supported_models().await {
+            Ok(models) if !models.is_empty() => {
+                println!(
+                    "  {} available models for {} ({}):",
+                    console::style("ℹ").blue(),
+                    console::style(&provider_name).cyan(),
+                    models.len()
+                );
+                for m in &models {
+                    let marker = if *m == model_name { " ←" } else { "" };
+                    println!(
+                        "    {}{}",
+                        console::style(m).white(),
+                        console::style(marker).green().bold()
+                    );
+                }
+                println!();
+                println!(
+                    "  {} switch with: /model <name>",
+                    console::style("tip").dim()
+                );
+            }
+            Ok(_) => {
+                println!(
+                    "  {} no models returned by provider",
+                    console::style("ℹ").blue()
+                );
+            }
+            Err(e) => {
+                println!(
+                    "  {} could not fetch models: {}",
+                    console::style("⚠").yellow(),
+                    e
+                );
+            }
+        }
         Ok(())
     }
 

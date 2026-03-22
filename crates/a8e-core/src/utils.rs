@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use tokio_util::sync::CancellationToken;
 use unicode_normalization::UnicodeNormalization;
 
@@ -45,6 +46,51 @@ pub fn is_token_cancelled(cancellation_token: &Option<CancellationToken>) -> boo
     cancellation_token
         .as_ref()
         .is_some_and(|t| t.is_cancelled())
+}
+
+/// Logs directory for diagnostic dumps (abnormal model responses, etc.)
+pub fn diagnostic_logs_dir() -> PathBuf {
+    crate::config::paths::Paths::data_dir().join("logs")
+}
+
+/// Write a diagnostic log entry when the model returns an abnormal response.
+/// Captures the raw conversation input and any partial response for post-mortem debugging.
+pub fn log_abnormal_response(
+    session_id: &str,
+    model: &str,
+    provider: &str,
+    messages_json: &serde_json::Value,
+    response_summary: &str,
+    retry_attempt: u32,
+) {
+    let dir = diagnostic_logs_dir();
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        tracing::warn!("Failed to create diagnostic logs dir {:?}: {}", dir, e);
+        return;
+    }
+
+    let ts = chrono::Utc::now().format("%Y%m%d_%H%M%S%.3f");
+    let sid_prefix: String = session_id.chars().take(8).collect();
+    let filename = format!("abnormal_{}_{}.json", ts, sid_prefix);
+    let path = dir.join(&filename);
+
+    let entry = serde_json::json!({
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "session_id": session_id,
+        "model": model,
+        "provider": provider,
+        "retry_attempt": retry_attempt,
+        "response_summary": response_summary,
+        "messages": messages_json,
+    });
+
+    match std::fs::write(
+        &path,
+        serde_json::to_string_pretty(&entry).unwrap_or_default(),
+    ) {
+        Ok(_) => tracing::info!("Diagnostic log saved: {:?}", path),
+        Err(e) => tracing::warn!("Failed to write diagnostic log {:?}: {}", path, e),
+    }
 }
 
 #[cfg(test)]
