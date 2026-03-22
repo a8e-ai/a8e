@@ -349,6 +349,7 @@ pub async fn handle_wechat_start() -> Result<()> {
     let mut update_buf = String::new();
     let mut failures: u32 = 0;
     let mut ctx_cache: HashMap<String, String> = HashMap::new();
+    let mut session_cache: HashMap<String, String> = HashMap::new();
 
     loop {
         match get_updates(&client, &base_url, &token, &update_buf).await {
@@ -410,18 +411,39 @@ pub async fn handle_wechat_start() -> Result<()> {
                     );
 
                     let session_manager = agent.config.session_manager.clone();
-                    let session = session_manager
-                        .create_session(
-                            std::env::current_dir()
-                                .unwrap_or_else(|_| std::path::PathBuf::from(".")),
-                            format!("WeChat: {}", name),
-                            SessionType::User,
-                        )
-                        .await?;
+                    let session_id =
+                        if let Some(existing_id) = session_cache.get(sender) {
+                            match session_manager.get_session(existing_id, false).await {
+                                Ok(_) => existing_id.clone(),
+                                Err(_) => {
+                                    let s = session_manager
+                                        .create_session(
+                                            std::env::current_dir()
+                                                .unwrap_or_else(|_| std::path::PathBuf::from(".")),
+                                            format!("WeChat: {}", name),
+                                            SessionType::User,
+                                        )
+                                        .await?;
+                                    session_cache.insert(sender.to_string(), s.id.clone());
+                                    s.id
+                                }
+                            }
+                        } else {
+                            let s = session_manager
+                                .create_session(
+                                    std::env::current_dir()
+                                        .unwrap_or_else(|_| std::path::PathBuf::from(".")),
+                                    format!("WeChat: {}", name),
+                                    SessionType::User,
+                                )
+                                .await?;
+                            session_cache.insert(sender.to_string(), s.id.clone());
+                            s.id
+                        };
 
                     let user_message = Message::user().with_text(&text);
                     let session_config = SessionConfig {
-                        id: session.id.clone(),
+                        id: session_id,
                         schedule_id: None,
                         max_turns: None,
                         retry_config: None,
