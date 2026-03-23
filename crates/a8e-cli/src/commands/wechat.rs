@@ -578,8 +578,7 @@ fn get_contact_token(user_id_or_name: &str) -> Option<String> {
     contacts
         .iter()
         .find(|c| {
-            c.user_id == user_id_or_name
-                || c.display_name.as_deref() == Some(user_id_or_name)
+            c.user_id == user_id_or_name || c.display_name.as_deref() == Some(user_id_or_name)
         })
         .map(|c| c.context_token.clone())
 }
