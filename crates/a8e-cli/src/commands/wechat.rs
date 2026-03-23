@@ -398,6 +398,7 @@ pub async fn handle_wechat_start() -> Result<()> {
                     let sender = msg.from_user_id.as_deref().unwrap_or("unknown");
                     if let Some(ct) = &msg.context_token {
                         ctx_cache.insert(sender.to_string(), ct.clone());
+                        save_contact(sender, ct);
                     }
 
                     let name = sender.split('@').next().unwrap_or(sender);
@@ -523,6 +524,108 @@ pub async fn handle_wechat_status() -> Result<()> {
             println!("{} WeChat: Not configured", console::style("✗").red());
             println!("  Run `a8e wechat setup` to authenticate.");
         }
+    }
+    Ok(())
+}
+
+// ── Contact persistence ──────────────────────────────────────────────────────
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+struct WechatContact {
+    user_id: String,
+    context_token: String,
+    last_seen: String,
+    display_name: Option<String>,
+}
+
+fn contacts_file_path() -> std::path::PathBuf {
+    a8e_core::config::paths::Paths::data_dir().join("wechat_contacts.json")
+}
+
+fn load_contacts() -> Vec<WechatContact> {
+    let path = contacts_file_path();
+    match std::fs::read_to_string(&path) {
+        Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+        Err(_) => Vec::new(),
+    }
+}
+
+fn save_contact(user_id: &str, context_token: &str) {
+    let mut contacts = load_contacts();
+    let display_name = user_id.split('@').next().unwrap_or(user_id).to_string();
+    let entry = WechatContact {
+        user_id: user_id.to_string(),
+        context_token: context_token.to_string(),
+        last_seen: chrono::Utc::now().to_rfc3339(),
+        display_name: Some(display_name),
+    };
+    if let Some(idx) = contacts.iter().position(|c| c.user_id == user_id) {
+        contacts[idx] = entry;
+    } else {
+        contacts.push(entry);
+    }
+    let path = contacts_file_path();
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(json) = serde_json::to_string_pretty(&contacts) {
+        let _ = std::fs::write(&path, json);
+    }
+}
+
+fn get_contact_token(user_id_or_name: &str) -> Option<String> {
+    let contacts = load_contacts();
+    contacts
+        .iter()
+        .find(|c| {
+            c.user_id == user_id_or_name
+                || c.display_name.as_deref() == Some(user_id_or_name)
+        })
+        .map(|c| c.context_token.clone())
+}
+
+pub async fn handle_wechat_send_message(to: &str, text: &str) -> Result<()> {
+    let token = std::env::var("A8E_WECHAT_TOKEN")
+        .map_err(|_| anyhow::anyhow!("A8E_WECHAT_TOKEN not set. Run `a8e wechat setup` first."))?;
+    let base_url =
+        std::env::var("A8E_WECHAT_BASE_URL").unwrap_or_else(|_| DEFAULT_BASE_URL.to_string());
+
+    let context_token = get_contact_token(to).ok_or_else(|| {
+        anyhow::anyhow!(
+            "No context token found for \"{}\". The user must message the bot first.\n\
+             Run `a8e wechat contacts` to see known contacts.",
+            to
+        )
+    })?;
+
+    let client = build_client();
+    for chunk in chunk_text(text, MAX_MSG_CHUNK) {
+        send_text(&client, &base_url, &token, to, chunk, &context_token).await?;
+    }
+
+    println!(
+        "{} Message sent to {}",
+        console::style("✓").green().bold(),
+        to
+    );
+    Ok(())
+}
+
+pub async fn handle_wechat_contacts() -> Result<()> {
+    let contacts = load_contacts();
+    if contacts.is_empty() {
+        println!("No contacts yet. Start the WeChat channel and receive messages first.");
+        return Ok(());
+    }
+    println!(
+        "{}\n",
+        console::style(format!("Known WeChat contacts ({}):", contacts.len())).bold()
+    );
+    for c in &contacts {
+        let name = c.display_name.as_deref().unwrap_or(&c.user_id);
+        println!("  {}", console::style(name).cyan());
+        println!("    User ID:   {}", c.user_id);
+        println!("    Last seen: {}\n", c.last_seen);
     }
     Ok(())
 }

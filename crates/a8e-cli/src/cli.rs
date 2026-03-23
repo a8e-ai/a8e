@@ -515,6 +515,26 @@ enum WechatCommand {
     /// Show WeChat configuration status
     #[command(about = "Show WeChat configuration and credential status")]
     Status,
+    /// Send a message proactively to a WeChat contact
+    #[command(
+        about = "Send a message to a known WeChat contact",
+        long_about = "Send a text message to a WeChat user who has previously messaged\n\
+            the bot. Uses the cached context_token from prior interactions.\n\n\
+            Example:\n  \
+            a8e wechat send-message --to \"friend_name\" --text \"Task done!\"\n\n\
+            Use 'a8e wechat contacts' to list known contacts."
+    )]
+    SendMessage {
+        /// Target user ID or display name
+        #[arg(long)]
+        to: String,
+        /// Message text to send
+        #[arg(long)]
+        text: String,
+    },
+    /// List known WeChat contacts
+    #[command(about = "List users who have messaged the bot (with cached context tokens)")]
+    Contacts,
 }
 
 #[derive(Subcommand)]
@@ -1670,6 +1690,10 @@ pub async fn cli() -> anyhow::Result<()> {
             WechatCommand::Setup => crate::commands::wechat::handle_wechat_setup().await,
             WechatCommand::Start => crate::commands::wechat::handle_wechat_start().await,
             WechatCommand::Status => crate::commands::wechat::handle_wechat_status().await,
+            WechatCommand::SendMessage { to, text } => {
+                crate::commands::wechat::handle_wechat_send_message(&to, &text).await
+            }
+            WechatCommand::Contacts => crate::commands::wechat::handle_wechat_contacts().await,
         },
         Some(Command::Update {
             canary,
