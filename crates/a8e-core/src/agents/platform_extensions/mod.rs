@@ -5,6 +5,7 @@ pub mod ext_manager;
 pub mod summon;
 pub mod todo;
 pub mod tom;
+pub mod wechat;
 
 use std::collections::HashMap;
 
@@ -112,6 +113,19 @@ pub static PLATFORM_EXTENSIONS: Lazy<HashMap<&'static str, PlatformExtensionDef>
                 default_enabled: true,
                 unprefixed_tools: false,
                 client_factory: |ctx| Box::new(tom::TomClient::new(ctx).unwrap()),
+            },
+        );
+
+        map.insert(
+            wechat::EXTENSION_NAME,
+            PlatformExtensionDef {
+                name: wechat::EXTENSION_NAME,
+                display_name: "WeChat",
+                description:
+                    "Send proactive messages to WeChat contacts via the ilink API. Requires A8E_WECHAT_TOKEN (from `a8e wechat setup`).",
+                default_enabled: true,
+                unprefixed_tools: false,
+                client_factory: |ctx| Box::new(wechat::WechatClient::new(ctx).unwrap()),
             },
         );
 
