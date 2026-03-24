@@ -5,3 +5,7 @@ yanked = "deny"
 # Emulate cargo-audit which only checks vulnerabilities and yanked crates, not unmaintained/unsound.
 unmaintained = "none"
 unsound = "none"
+
+# rustls-webpki 0.101.x CRL matching bug — transitive dep via AWS SDK's hyper-rustls 0.24.x.
+# Limited impact (requires compromised issuing authority). Waiting for upstream fix.
+ignore = ["RUSTSEC-2026-0049"]
