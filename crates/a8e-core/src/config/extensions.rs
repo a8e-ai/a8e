@@ -168,7 +168,7 @@ pub fn get_warnings() -> Vec<String> {
 }
 
 /// Builtin extensions that are always injected into every session.
-const AUTO_BUILTINS: &[(&str, &str)] = &[("cron", "Session-scoped scheduled tasks")];
+const AUTO_BUILTINS: &[(&str, &str)] = &[("loop", "Session-scoped loop tasks")];
 
 fn inject_auto_builtins(mut extensions: Vec<ExtensionConfig>) -> Vec<ExtensionConfig> {
     for &(name, description) in AUTO_BUILTINS {
@@ -241,7 +241,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inject_auto_builtins_adds_cron() {
+    fn test_inject_auto_builtins_adds_loop() {
         let extensions = vec![ExtensionConfig::Builtin {
             name: "developer".to_string(),
             description: "".to_string(),
@@ -253,7 +253,7 @@ mod tests {
 
         let result = inject_auto_builtins(extensions);
         assert_eq!(result.len(), 2);
-        assert!(result.iter().any(|e| e.name() == "cron"));
+        assert!(result.iter().any(|e| e.name() == "loop"));
     }
 
     #[test]
@@ -268,7 +268,7 @@ mod tests {
                 available_tools: vec![],
             },
             ExtensionConfig::Builtin {
-                name: "cron".to_string(),
+                name: "loop".to_string(),
                 description: "custom".to_string(),
                 display_name: None,
                 timeout: Some(60),
@@ -279,11 +279,11 @@ mod tests {
 
         let result = inject_auto_builtins(extensions);
         assert_eq!(result.len(), 2);
-        let cron = result.iter().find(|e| e.name() == "cron").unwrap();
-        if let ExtensionConfig::Builtin { description, .. } = cron {
+        let loop_ext = result.iter().find(|e| e.name() == "loop").unwrap();
+        if let ExtensionConfig::Builtin { description, .. } = loop_ext {
             assert_eq!(description, "custom");
         } else {
-            panic!("cron should be a Builtin");
+            panic!("loop should be a Builtin");
         }
     }
 
@@ -291,6 +291,6 @@ mod tests {
     fn test_inject_auto_builtins_on_empty() {
         let result = inject_auto_builtins(vec![]);
         assert_eq!(result.len(), 1);
-        assert_eq!(result[0].name(), "cron");
+        assert_eq!(result[0].name(), "loop");
     }
 }

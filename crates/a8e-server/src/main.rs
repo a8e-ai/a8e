@@ -55,7 +55,7 @@ async fn main() -> anyhow::Result<()> {
             match server {
                 McpCommand::AutoVisualiser => serve(AutoVisualiserRouter::new()).await?,
                 McpCommand::ComputerController => serve(ComputerControllerServer::new()).await?,
-                McpCommand::Cron => serve(a8e_mcp::CronServer::new()).await?,
+                McpCommand::Loop => serve(a8e_mcp::LoopServer::new()).await?,
                 McpCommand::Memory => serve(MemoryServer::new()).await?,
                 McpCommand::Tutorial => serve(TutorialServer::new()).await?,
                 McpCommand::Developer => {

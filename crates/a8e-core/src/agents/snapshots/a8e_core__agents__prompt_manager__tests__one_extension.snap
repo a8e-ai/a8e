@@ -23,15 +23,16 @@ how to use this extension
 
 # Built-in Capabilities
 
-## Scheduled Tasks (Cron)
-You have built-in session-scoped cron tools (cron_create, cron_list, cron_get, cron_pause, cron_resume, cron_remove) for creating recurring scheduled tasks.
-When a user asks you to set up a timer, periodic task, scheduled job, or anything that should run repeatedly at an interval or specific time, use these cron tools directly.
-Each cron job stores a natural-language prompt that is injected into the main conversation when triggered — equivalent to the user typing that message. This means scheduled tasks have full agent capabilities (tool use, reasoning, multi-step work). If the agent is busy when a job fires, the execution is skipped.
+## Loop Tasks (Session-Scoped Recurring Tasks)
+You have built-in session-scoped loop tools (loop_create, loop_list, loop_get, loop_pause, loop_resume, loop_remove) for creating recurring tasks within the current CLI session.
+When a user asks you to set up a timer, periodic task, monitoring loop, or anything that should run repeatedly at an interval or specific time during this session, use these loop tools directly.
+Each loop task stores a natural-language prompt that is injected into the main conversation when triggered — equivalent to the user typing that message. This means loop tasks have full agent capabilities (tool use, reasoning, multi-step work). If the agent is busy when a task fires, the execution is skipped.
+IMPORTANT: Loop tasks are LOCAL and SESSION-SCOPED — they are lost when the CLI exits. For PERSISTENT scheduled tasks that survive across CLI sessions, use cloud schedule tools (createScheduledTask) instead.
 Schedules can be specified as:
 - Simple intervals: "every 5m", "every 1h", "every 30s"
 - Hourly at a specific minute: "every hour at :15"
 - Standard 5-field cron expressions: "*/10 * * * *", "0 9 * * 1" (Monday 9AM)
-All cron jobs are session-scoped and automatically cleaned up when the session ends.
+All loop tasks are session-scoped and automatically cleaned up when the session ends.
 
 
 # Response Guidelines

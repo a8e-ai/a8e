@@ -11,8 +11,8 @@ pub static APP_STRATEGY: Lazy<AppStrategyArgs> = Lazy::new(|| AppStrategyArgs {
 
 pub mod autovisualiser;
 pub mod computercontroller;
-pub mod cron;
 pub mod developer;
+pub mod loop_scheduler;
 pub mod mcp_server_runner;
 mod memory;
 pub mod subprocess;
@@ -20,12 +20,16 @@ pub mod tutorial;
 
 pub use autovisualiser::AutoVisualiserRouter;
 pub use computercontroller::ComputerControllerServer;
-pub use cron::CronServer;
-pub use cron::{set_agent_busy, take_cron_prompt_receiver, CronPromptEvent};
 pub use developer::rmcp_developer::DeveloperServer;
 pub use developer::rmcp_developer::WORKING_DIR_PLACEHOLDER;
+pub use loop_scheduler::LoopServer;
+pub use loop_scheduler::{set_agent_busy, take_loop_prompt_receiver, LoopPromptEvent};
 pub use memory::MemoryServer;
 pub use tutorial::TutorialServer;
+
+// Legacy aliases for backward compatibility
+pub use loop_scheduler::CronServer;
+pub use loop_scheduler::{take_cron_prompt_receiver, CronPromptEvent};
 
 /// Type definition for a function that spawns and serves a builtin extension server
 pub type SpawnServerFn = fn(tokio::io::DuplexStream, tokio::io::DuplexStream);
@@ -63,6 +67,6 @@ pub static BUILTIN_EXTENSIONS: Lazy<HashMap<&'static str, SpawnServerFn>> = Lazy
         builtin!(computercontroller, ComputerControllerServer),
         builtin!(memory, MemoryServer),
         builtin!(tutorial, TutorialServer),
-        builtin!(cron, CronServer),
+        builtin!(loop, LoopServer),
     ])
 });

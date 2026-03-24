@@ -475,7 +475,7 @@ impl CliSession {
 
         self.update_completion_cache().await?;
 
-        let mut cron_rx = a8e_mcp::take_cron_prompt_receiver();
+        let mut loop_rx = a8e_mcp::take_loop_prompt_receiver();
 
         // Spawn a dedicated thread for readline (Editor is !Send)
         let (input_tx, mut input_rx) =
@@ -540,9 +540,9 @@ impl CliSession {
                             None => break 'outer,
                         }
                     }
-                    Some(event) = recv_cron_prompt(&mut cron_rx) => {
+                    Some(event) = recv_loop_prompt(&mut loop_rx) => {
                         a8e_mcp::set_agent_busy(true);
-                        self.process_cron_prompt(event).await?;
+                        self.process_loop_prompt(event).await?;
                         a8e_mcp::set_agent_busy(false);
                     }
                 }
@@ -1554,12 +1554,12 @@ impl CliSession {
         Ok(())
     }
 
-    /// Process a cron-triggered prompt as if the user typed it.
-    async fn process_cron_prompt(&mut self, event: a8e_mcp::CronPromptEvent) -> Result<()> {
+    /// Process a loop-triggered prompt as if the user typed it.
+    async fn process_loop_prompt(&mut self, event: a8e_mcp::LoopPromptEvent) -> Result<()> {
         println!(
             "\n  {} {} {}",
             console::style("🕐").bold(),
-            console::style(format!("[Cron: {}]", event.schedule)).cyan(),
+            console::style(format!("[Loop: {}]", event.schedule)).cyan(),
             console::style("Executing scheduled prompt...").dim()
         );
         println!(
@@ -1589,9 +1589,9 @@ impl CliSession {
     }
 }
 
-async fn recv_cron_prompt(
-    rx: &mut Option<tokio::sync::mpsc::UnboundedReceiver<a8e_mcp::CronPromptEvent>>,
-) -> Option<a8e_mcp::CronPromptEvent> {
+async fn recv_loop_prompt(
+    rx: &mut Option<tokio::sync::mpsc::UnboundedReceiver<a8e_mcp::LoopPromptEvent>>,
+) -> Option<a8e_mcp::LoopPromptEvent> {
     match rx {
         Some(rx) => rx.recv().await,
         None => std::future::pending().await,

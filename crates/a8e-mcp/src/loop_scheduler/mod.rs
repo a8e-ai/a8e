@@ -1,7 +1,7 @@
-//! Session-Scoped Cron Scheduler (MCP Server)
+//! Session-Scoped Loop Scheduler (MCP Server)
 //!
 //! Pushes natural-language prompts into the main agent interaction on a
-//! schedule, as if the user had typed them.  This gives cron jobs full
+//! schedule, as if the user had typed them.  This gives loop tasks full
 //! agent capabilities (tool use, reasoning, multi-step tasks) instead of
 //! being limited to simple shell commands.
 //!
@@ -30,31 +30,31 @@ use tokio::sync::Mutex;
 const MAX_JOBS_PER_SESSION: usize = 20;
 
 // ---------------------------------------------------------------------------
-// Global cron channel — bridges the MCP extension and the main session loop
+// Global loop channel — bridges the MCP extension and the main session loop
 // ---------------------------------------------------------------------------
 
 static AGENT_BUSY: AtomicBool = AtomicBool::new(false);
 
-struct GlobalCronChannel {
-    sender: tokio::sync::mpsc::UnboundedSender<CronPromptEvent>,
-    receiver: std::sync::Mutex<Option<tokio::sync::mpsc::UnboundedReceiver<CronPromptEvent>>>,
+struct GlobalLoopChannel {
+    sender: tokio::sync::mpsc::UnboundedSender<LoopPromptEvent>,
+    receiver: std::sync::Mutex<Option<tokio::sync::mpsc::UnboundedReceiver<LoopPromptEvent>>>,
 }
 
-static CRON_CHANNEL: OnceLock<GlobalCronChannel> = OnceLock::new();
+static LOOP_CHANNEL: OnceLock<GlobalLoopChannel> = OnceLock::new();
 
-fn get_or_init_channel() -> &'static GlobalCronChannel {
-    CRON_CHANNEL.get_or_init(|| {
+fn get_or_init_channel() -> &'static GlobalLoopChannel {
+    LOOP_CHANNEL.get_or_init(|| {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-        GlobalCronChannel {
+        GlobalLoopChannel {
             sender: tx,
             receiver: std::sync::Mutex::new(Some(rx)),
         }
     })
 }
 
-/// Take the global cron prompt receiver.  Call once from the session loop.
+/// Take the global loop prompt receiver.  Call once from the session loop.
 /// Returns `None` if already taken.
-pub fn take_cron_prompt_receiver() -> Option<tokio::sync::mpsc::UnboundedReceiver<CronPromptEvent>>
+pub fn take_loop_prompt_receiver() -> Option<tokio::sync::mpsc::UnboundedReceiver<LoopPromptEvent>>
 {
     get_or_init_channel().receiver.lock().unwrap().take()
 }
@@ -73,7 +73,7 @@ fn is_agent_busy() -> bool {
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CronJobInfo {
+pub struct LoopJobInfo {
     pub id: String,
     pub schedule: String,
     /// Natural-language prompt injected into the agent conversation
@@ -84,30 +84,41 @@ pub struct CronJobInfo {
     pub next_run_at: Option<String>,
     pub run_count: u64,
     pub skip_count: u64,
-    pub last_result: Option<CronJobResult>,
-    pub status: CronJobStatus,
+    pub last_result: Option<LoopJobResult>,
+    pub status: LoopJobStatus,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CronJobResult {
+pub struct LoopJobResult {
     pub success: bool,
     pub summary: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-pub enum CronJobStatus {
+pub enum LoopJobStatus {
     Active,
     Paused,
 }
 
 /// A prompt event that should be injected into the main agent conversation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CronPromptEvent {
+pub struct LoopPromptEvent {
     pub job_id: String,
     pub prompt: String,
     pub cwd: Option<String>,
     pub schedule: String,
+}
+
+// Legacy aliases for backward compatibility
+pub type CronJobInfo = LoopJobInfo;
+pub type CronJobResult = LoopJobResult;
+pub type CronJobStatus = LoopJobStatus;
+pub type CronPromptEvent = LoopPromptEvent;
+pub type CronServer = LoopServer;
+pub fn take_cron_prompt_receiver() -> Option<tokio::sync::mpsc::UnboundedReceiver<LoopPromptEvent>>
+{
+    take_loop_prompt_receiver()
 }
 
 // ---------------------------------------------------------------------------
@@ -115,7 +126,7 @@ pub struct CronPromptEvent {
 // ---------------------------------------------------------------------------
 
 struct InternalJob {
-    info: CronJobInfo,
+    info: LoopJobInfo,
     cancel_token: tokio_util::sync::CancellationToken,
 }
 
@@ -126,7 +137,7 @@ type JobRegistry = Arc<Mutex<HashMap<String, InternalJob>>>;
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CronCreateParams {
+pub struct LoopCreateParams {
     /// Schedule expression. Supported formats:
     /// - "every 5m", "every 1h", "every 30s" (fixed interval)
     /// - "every hour at :15" (hourly at specific minute)
@@ -142,29 +153,29 @@ pub struct CronCreateParams {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CronListParams {}
+pub struct LoopListParams {}
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CronRemoveParams {
-    /// The ID of the cron job to remove
+pub struct LoopRemoveParams {
+    /// The ID of the loop job to remove
     pub job_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CronGetParams {
-    /// The ID of the cron job
+pub struct LoopGetParams {
+    /// The ID of the loop job
     pub job_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CronPauseParams {
-    /// The ID of the cron job to pause
+pub struct LoopPauseParams {
+    /// The ID of the loop job to pause
     pub job_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CronResumeParams {
-    /// The ID of the cron job to resume
+pub struct LoopResumeParams {
+    /// The ID of the loop job to resume
     pub job_id: String,
 }
 
@@ -173,30 +184,33 @@ pub struct CronResumeParams {
 // ---------------------------------------------------------------------------
 
 #[derive(Clone)]
-pub struct CronServer {
+pub struct LoopServer {
     tool_router: ToolRouter<Self>,
     instructions: String,
     jobs: JobRegistry,
 }
 
-impl Default for CronServer {
+impl Default for LoopServer {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[tool_router(router = tool_router)]
-impl CronServer {
+impl LoopServer {
     pub fn new() -> Self {
         let instructions = formatdoc! {r#"
-            Session-scoped scheduled task management with prompt injection.
+            Session-scoped loop task management with prompt injection.
             Create, list, pause, resume, and remove recurring agent prompts
             that fire on a schedule within the current CLI session.
             Each job stores a natural-language prompt that is injected into
             the main agent conversation when triggered — equivalent to the
             user typing the message. If the agent is busy, the prompt is
             skipped. All jobs are automatically cleaned up when the session
-            ends."#
+            ends.
+            IMPORTANT: Loop tasks are LOCAL and SESSION-SCOPED — they are
+            lost when the CLI exits. For PERSISTENT scheduled tasks that
+            survive across CLI sessions, use cloud schedule tools instead."#
         };
         get_or_init_channel();
         Self {
@@ -207,12 +221,12 @@ impl CronServer {
     }
 
     #[tool(
-        name = "cron_create",
-        description = "Create a session-scoped scheduled task. The prompt is injected into the main agent conversation on each trigger, giving the task full agent capabilities (tool use, reasoning, multi-step work). If the agent is busy, execution is skipped. Schedules: 'every 5m', 'every 1h', 'every 30s', 'every hour at :15', or a 5-field cron expression like '*/10 * * * *'."
+        name = "loop_create",
+        description = "Create a CLI SESSION-SCOPED loop task (temporary, lost when CLI exits). The prompt is injected into the main agent conversation on each trigger, giving the task full agent capabilities (tool use, reasoning, multi-step work). If the agent is busy, execution is skipped. For PERSISTENT scheduled tasks that survive across sessions, use cloud schedule tools (createScheduledTask) instead. Schedules: 'every 5m', 'every 1h', 'every 30s', 'every hour at :15', or a 5-field cron expression like '*/10 * * * *'."
     )]
-    async fn cron_create(
+    async fn loop_create(
         &self,
-        params: Parameters<CronCreateParams>,
+        params: Parameters<LoopCreateParams>,
         _context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, ErrorData> {
         let params = params.0;
@@ -223,7 +237,7 @@ impl CronServer {
             return Err(ErrorData::new(
                 ErrorCode::INVALID_REQUEST,
                 format!(
-                    "Maximum {} concurrent cron jobs per session. Remove some before adding new ones.",
+                    "Maximum {} concurrent loop jobs per session. Remove some before adding new ones.",
                     MAX_JOBS_PER_SESSION
                 ),
                 None,
@@ -237,7 +251,7 @@ impl CronServer {
         let now = chrono::Utc::now();
         let cancel_token = tokio_util::sync::CancellationToken::new();
 
-        let info = CronJobInfo {
+        let info = LoopJobInfo {
             id: id.clone(),
             schedule: params.schedule.clone(),
             prompt: params.prompt.clone(),
@@ -248,7 +262,7 @@ impl CronServer {
             run_count: 0,
             skip_count: 0,
             last_result: None,
-            status: CronJobStatus::Active,
+            status: LoopJobStatus::Active,
         };
 
         let internal = InternalJob {
@@ -270,9 +284,9 @@ impl CronServer {
 
         let result = serde_json::json!({
             "success": true,
-            "message": format!("Cron job created: {}", params.schedule),
+            "message": format!("Loop task created: {}", params.schedule),
             "job": info,
-            "note": "This job will inject the prompt into the main agent conversation on each trigger. If the agent is busy, the execution will be skipped. Use `cron_get` or `cron_list` MCP tools to check job status — there is no HTTP API."
+            "note": "This job will inject the prompt into the main agent conversation on each trigger. If the agent is busy, the execution will be skipped. Use `loop_get` or `loop_list` MCP tools to check job status — there is no HTTP API."
         });
 
         Ok(CallToolResult::success(vec![Content::text(
@@ -281,16 +295,16 @@ impl CronServer {
     }
 
     #[tool(
-        name = "cron_list",
-        description = "List all session-scoped cron jobs. Shows schedule, prompt, status, run count, skip count, last/next run time, and last result for each job."
+        name = "loop_list",
+        description = "List all session-scoped loop tasks. Shows schedule, prompt, status, run count, skip count, last/next run time, and last result for each job."
     )]
-    async fn cron_list(
+    async fn loop_list(
         &self,
-        _params: Parameters<CronListParams>,
+        _params: Parameters<LoopListParams>,
         _context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, ErrorData> {
         let registry = self.jobs.lock().await;
-        let jobs: Vec<&CronJobInfo> = registry.values().map(|j| &j.info).collect();
+        let jobs: Vec<&LoopJobInfo> = registry.values().map(|j| &j.info).collect();
 
         let result = serde_json::json!({
             "success": true,
@@ -305,12 +319,12 @@ impl CronServer {
     }
 
     #[tool(
-        name = "cron_remove",
-        description = "Remove a session-scoped cron job by ID. The job is stopped and deleted immediately."
+        name = "loop_remove",
+        description = "Remove a session-scoped loop task by ID. The job is stopped and deleted immediately."
     )]
-    async fn cron_remove(
+    async fn loop_remove(
         &self,
-        params: Parameters<CronRemoveParams>,
+        params: Parameters<LoopRemoveParams>,
         _context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, ErrorData> {
         let params = params.0;
@@ -319,7 +333,7 @@ impl CronServer {
         let job = registry.remove(&params.job_id).ok_or_else(|| {
             ErrorData::new(
                 ErrorCode::INVALID_PARAMS,
-                format!("Cron job not found: {}", params.job_id),
+                format!("Loop job not found: {}", params.job_id),
                 None,
             )
         })?;
@@ -328,7 +342,7 @@ impl CronServer {
 
         let result = serde_json::json!({
             "success": true,
-            "message": format!("Cron job {} removed", params.job_id),
+            "message": format!("Loop job {} removed", params.job_id),
             "removed_job": job.info
         });
 
@@ -338,12 +352,12 @@ impl CronServer {
     }
 
     #[tool(
-        name = "cron_get",
-        description = "Get detailed status of a specific cron job by ID."
+        name = "loop_get",
+        description = "Get detailed status of a specific loop task by ID."
     )]
-    async fn cron_get(
+    async fn loop_get(
         &self,
-        params: Parameters<CronGetParams>,
+        params: Parameters<LoopGetParams>,
         _context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, ErrorData> {
         let params = params.0;
@@ -352,7 +366,7 @@ impl CronServer {
         let job = registry.get(&params.job_id).ok_or_else(|| {
             ErrorData::new(
                 ErrorCode::INVALID_PARAMS,
-                format!("Cron job not found: {}", params.job_id),
+                format!("Loop job not found: {}", params.job_id),
                 None,
             )
         })?;
@@ -368,12 +382,12 @@ impl CronServer {
     }
 
     #[tool(
-        name = "cron_pause",
-        description = "Pause an active cron job. The job remains registered but stops firing prompts."
+        name = "loop_pause",
+        description = "Pause an active loop task. The job remains registered but stops firing prompts."
     )]
-    async fn cron_pause(
+    async fn loop_pause(
         &self,
-        params: Parameters<CronPauseParams>,
+        params: Parameters<LoopPauseParams>,
         _context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, ErrorData> {
         let params = params.0;
@@ -382,25 +396,25 @@ impl CronServer {
         let job = registry.get_mut(&params.job_id).ok_or_else(|| {
             ErrorData::new(
                 ErrorCode::INVALID_PARAMS,
-                format!("Cron job not found: {}", params.job_id),
+                format!("Loop job not found: {}", params.job_id),
                 None,
             )
         })?;
 
-        if job.info.status == CronJobStatus::Paused {
+        if job.info.status == LoopJobStatus::Paused {
             return Err(ErrorData::new(
                 ErrorCode::INVALID_REQUEST,
-                format!("Cron job {} is already paused", params.job_id),
+                format!("Loop job {} is already paused", params.job_id),
                 None,
             ));
         }
 
-        job.info.status = CronJobStatus::Paused;
+        job.info.status = LoopJobStatus::Paused;
         job.info.next_run_at = None;
 
         let result = serde_json::json!({
             "success": true,
-            "message": format!("Cron job {} paused", params.job_id),
+            "message": format!("Loop job {} paused", params.job_id),
             "job": job.info
         });
 
@@ -409,10 +423,10 @@ impl CronServer {
         )]))
     }
 
-    #[tool(name = "cron_resume", description = "Resume a paused cron job.")]
-    async fn cron_resume(
+    #[tool(name = "loop_resume", description = "Resume a paused loop task.")]
+    async fn loop_resume(
         &self,
-        params: Parameters<CronResumeParams>,
+        params: Parameters<LoopResumeParams>,
         _context: RequestContext<RoleServer>,
     ) -> Result<CallToolResult, ErrorData> {
         let params = params.0;
@@ -421,24 +435,24 @@ impl CronServer {
         let job = registry.get_mut(&params.job_id).ok_or_else(|| {
             ErrorData::new(
                 ErrorCode::INVALID_PARAMS,
-                format!("Cron job not found: {}", params.job_id),
+                format!("Loop job not found: {}", params.job_id),
                 None,
             )
         })?;
 
-        if job.info.status == CronJobStatus::Active {
+        if job.info.status == LoopJobStatus::Active {
             return Err(ErrorData::new(
                 ErrorCode::INVALID_REQUEST,
-                format!("Cron job {} is already active", params.job_id),
+                format!("Loop job {} is already active", params.job_id),
                 None,
             ));
         }
 
-        job.info.status = CronJobStatus::Active;
+        job.info.status = LoopJobStatus::Active;
 
         let result = serde_json::json!({
             "success": true,
-            "message": format!("Cron job {} resumed", params.job_id),
+            "message": format!("Loop job {} resumed", params.job_id),
             "job": job.info
         });
 
@@ -449,7 +463,7 @@ impl CronServer {
 }
 
 #[tool_handler]
-impl ServerHandler for CronServer {
+impl ServerHandler for LoopServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             instructions: Some(self.instructions.clone()),
@@ -466,7 +480,7 @@ impl ServerHandler for CronServer {
 
 enum ScheduleKind {
     Interval(u64),
-    Cron(CronFields),
+    CronExpr(CronFields),
 }
 
 struct CronFields {
@@ -504,7 +518,7 @@ fn parse_schedule(schedule: &str) -> Result<ScheduleKind, String> {
         if minute > 59 {
             return Err(format!("Invalid minute: {}", minute));
         }
-        return Ok(ScheduleKind::Cron(CronFields {
+        return Ok(ScheduleKind::CronExpr(CronFields {
             minute: vec![minute],
             hour: (0..=23).collect(),
             day_of_month: (1..=31).collect(),
@@ -515,7 +529,7 @@ fn parse_schedule(schedule: &str) -> Result<ScheduleKind, String> {
 
     let parts: Vec<&str> = schedule.split_whitespace().collect();
     if parts.len() == 5 {
-        return Ok(ScheduleKind::Cron(CronFields {
+        return Ok(ScheduleKind::CronExpr(CronFields {
             minute: parse_cron_field(parts[0], 0, 59)?,
             hour: parse_cron_field(parts[1], 0, 23)?,
             day_of_month: parse_cron_field(parts[2], 1, 31)?,
@@ -647,7 +661,7 @@ fn spawn_job_executor(
                     let should_run = {
                         let reg = jobs.lock().await;
                         reg.get(&job_id)
-                            .map(|j| j.info.status == CronJobStatus::Active)
+                            .map(|j| j.info.status == LoopJobStatus::Active)
                             .unwrap_or(false)
                     };
 
@@ -656,7 +670,7 @@ fn spawn_job_executor(
                     }
                 }
             }
-            ScheduleKind::Cron(fields) => {
+            ScheduleKind::CronExpr(fields) => {
                 let fields = Arc::new(fields);
                 loop {
                     let next_time = get_next_cron_time(&fields, chrono::Utc::now());
@@ -679,7 +693,7 @@ fn spawn_job_executor(
                     let should_run = {
                         let reg = jobs.lock().await;
                         reg.get(&job_id)
-                            .map(|j| j.info.status == CronJobStatus::Active)
+                            .map(|j| j.info.status == LoopJobStatus::Active)
                             .unwrap_or(false)
                     };
 
@@ -697,7 +711,7 @@ async fn inject_prompt(job_id: &str, prompt: &str, cwd: Option<&str>, jobs: &Job
         let mut reg = jobs.lock().await;
         if let Some(job) = reg.get_mut(job_id) {
             job.info.skip_count += 1;
-            job.info.last_result = Some(CronJobResult {
+            job.info.last_result = Some(LoopJobResult {
                 success: false,
                 summary: "Skipped: agent is busy processing another request".to_string(),
             });
@@ -713,7 +727,7 @@ async fn inject_prompt(job_id: &str, prompt: &str, cwd: Option<&str>, jobs: &Job
     };
 
     let channel = get_or_init_channel();
-    let _ = channel.sender.send(CronPromptEvent {
+    let _ = channel.sender.send(LoopPromptEvent {
         job_id: job_id.to_string(),
         prompt: prompt.to_string(),
         cwd: cwd.map(|s| s.to_string()),
@@ -732,7 +746,7 @@ async fn inject_prompt(job_id: &str, prompt: &str, cwd: Option<&str>, jobs: &Job
     if let Some(job) = reg.get_mut(job_id) {
         job.info.last_run_at = Some(now);
         job.info.run_count += 1;
-        job.info.last_result = Some(CronJobResult {
+        job.info.last_result = Some(LoopJobResult {
             success: true,
             summary,
         });
@@ -774,21 +788,21 @@ mod tests {
     #[test]
     fn test_parse_hourly_at() {
         match parse_schedule("every hour at :15").unwrap() {
-            ScheduleKind::Cron(fields) => {
+            ScheduleKind::CronExpr(fields) => {
                 assert_eq!(fields.minute, vec![15]);
                 assert_eq!(fields.hour.len(), 24);
             }
-            _ => panic!("Expected cron"),
+            _ => panic!("Expected cron expression"),
         }
     }
 
     #[test]
     fn test_parse_cron_expression() {
         match parse_schedule("*/10 * * * *").unwrap() {
-            ScheduleKind::Cron(fields) => {
+            ScheduleKind::CronExpr(fields) => {
                 assert_eq!(fields.minute, vec![0, 10, 20, 30, 40, 50]);
             }
-            _ => panic!("Expected cron"),
+            _ => panic!("Expected cron expression"),
         }
     }
 

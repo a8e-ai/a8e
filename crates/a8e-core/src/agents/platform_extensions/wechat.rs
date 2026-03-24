@@ -171,7 +171,7 @@ impl WechatClient {
             instructions: Some(
                 "Send proactive messages to WeChat contacts. \
                  Use wechat_send to push important notifications (task completions, \
-                 cron results, summaries) to the connected WeChat user. \
+                 loop task results, summaries) to the connected WeChat user. \
                  Use wechat_contacts to check who is available. \
                  The context_token is valid for 24 hours after the user's last WeChat message."
                     .to_string(),
