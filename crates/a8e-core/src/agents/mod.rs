@@ -1,6 +1,7 @@
 mod agent;
 pub(crate) mod builtin_skills;
 pub mod container;
+mod context_tool;
 pub mod execute_commands;
 pub mod extension;
 pub mod extension_malware_check;

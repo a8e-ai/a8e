@@ -2,6 +2,7 @@ use indoc::indoc;
 use rmcp::model::{Tool, ToolAnnotations};
 use rmcp::object;
 pub const PLATFORM_MANAGE_SCHEDULE_TOOL_NAME: &str = "platform__manage_schedule";
+pub const PLATFORM_CONTEXT_MGMT_TOOL_NAME: &str = "platform__context_management";
 
 pub fn manage_schedule_tool() -> Tool {
     Tool::new(
@@ -40,7 +41,49 @@ pub fn manage_schedule_tool() -> Tool {
     ).annotate(ToolAnnotations {
         title: Some("Manage scheduled recipes".to_string()),
         read_only_hint: Some(false),
-        destructive_hint: Some(true), // Can kill jobs
+        destructive_hint: Some(true),
+        idempotent_hint: Some(false),
+        open_world_hint: Some(false),
+    })
+}
+
+pub fn context_management_tool() -> Tool {
+    Tool::new(
+        PLATFORM_CONTEXT_MGMT_TOOL_NAME.to_string(),
+        indoc! {r#"
+            Manage the current conversation context. Use this to programmatically
+            clear or compact your conversation history — essential for keeping
+            context clean between loop/scheduled task iterations.
+
+            Actions:
+            - "compact": Summarize the conversation history to reduce token usage
+              while preserving key context. Equivalent to the /compact command.
+            - "clear": Reset the conversation to an empty state. All history is
+              discarded and token counters are reset. Equivalent to /clear.
+            - "status": Check current context usage — token count, context limit,
+              and whether auto-compaction is needed.
+        "#}
+        .to_string(),
+        object!({
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["compact", "clear", "status"],
+                    "description": "The context management action to perform"
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Brief reason for the action (e.g. 'loop iteration complete')"
+                }
+            }
+        }),
+    )
+    .annotate(ToolAnnotations {
+        title: Some("Manage conversation context".to_string()),
+        read_only_hint: Some(false),
+        destructive_hint: Some(true),
         idempotent_hint: Some(false),
         open_world_hint: Some(false),
     })
