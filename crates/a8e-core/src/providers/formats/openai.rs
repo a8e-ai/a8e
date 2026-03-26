@@ -34,7 +34,7 @@ type ToolCallData = HashMap<
 struct DeltaToolCallFunction {
     name: Option<String>,
     #[serde(default)]
-    arguments: String,
+    arguments: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -587,7 +587,7 @@ where
                     for (idx, tool_call) in tool_calls.iter().enumerate() {
                         let index = tool_call.index.unwrap_or(idx as i32);
                         if let (Some(id), Some(name)) = (&tool_call.id, &tool_call.function.name) {
-                            tool_call_data.insert(index, (id.clone(), name.clone(), tool_call.function.arguments.clone(), tool_call.extra.clone()));
+                            tool_call_data.insert(index, (id.clone(), name.clone(), tool_call.function.arguments.clone().unwrap_or_default(), tool_call.extra.clone()));
                         }
                     }
                 }
@@ -622,7 +622,7 @@ where
                                         for (idx, delta_call) in delta_tool_calls.iter().enumerate() {
                                             let index = delta_call.index.unwrap_or(idx as i32);
                                             if let Some((_, _, ref mut args, ref mut extra)) = tool_call_data.get_mut(&index) {
-                                                args.push_str(&delta_call.function.arguments);
+                                                args.push_str(delta_call.function.arguments.as_deref().unwrap_or(""));
                                                 if extra.is_none() && delta_call.extra.is_some() {
                                                     *extra = delta_call.extra.clone();
                                                 } else if let (Some(existing), Some(new_extra)) = (extra.as_mut(), &delta_call.extra) {
@@ -631,7 +631,7 @@ where
                                                     }
                                                 }
                                             } else if let (Some(id), Some(name)) = (&delta_call.id, &delta_call.function.name) {
-                                                tool_call_data.insert(index, (id.clone(), name.clone(), delta_call.function.arguments.clone(), delta_call.extra.clone()));
+                                                tool_call_data.insert(index, (id.clone(), name.clone(), delta_call.function.arguments.clone().unwrap_or_default(), delta_call.extra.clone()));
                                             }
                                         }
                                     }
@@ -866,6 +866,17 @@ mod tests {
     use serde_json::json;
     use tokio::pin;
     use tokio_stream::{self, StreamExt};
+
+    #[test]
+    fn streaming_chunk_deserializes_null_tool_arguments() {
+        let json = r#"{"choices":[{"delta":{"tool_calls":[{"function":{"arguments":null},"index":0,"id":"","type":"function"}]},"index":0}],"object":"chat.completion.chunk","usage":null,"created":1774536873,"system_fingerprint":null,"model":"deepseek-v3.2","id":"chatcmpl-6693ed2e-5c8d-98fe-8163-f380dc5bbc85"}"#;
+        let chunk: super::StreamingChunk =
+            serde_json::from_str(json).expect("null arguments should deserialize");
+        let args = &chunk.choices[0].delta.tool_calls.as_ref().unwrap()[0]
+            .function
+            .arguments;
+        assert!(args.is_none());
+    }
 
     #[test]
     fn test_validate_tool_schemas() {

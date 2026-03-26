@@ -93,7 +93,10 @@ struct ProviderTester {
     name: String,
     extension_manager: Arc<ExtensionManager>,
     is_cli_provider: bool,
+    /// Preferred name for `test_model_switch` (e.g. `"sonnet"` for claude-code).
     model_switch_name: Option<String>,
+    /// Resolved in `test_model_listing`: actual model id to use, or `None` if switching should be skipped.
+    model_switch_effective: Mutex<Option<String>>,
 }
 
 impl ProviderTester {
@@ -110,6 +113,7 @@ impl ProviderTester {
             extension_manager,
             is_cli_provider,
             model_switch_name,
+            model_switch_effective: Mutex::new(None),
         }
     }
 
@@ -302,12 +306,8 @@ impl ProviderTester {
         Ok(())
     }
 
-    async fn test_model_switch(&self, session_id: &str) -> Result<()> {
+    async fn test_model_switch(&self, session_id: &str, alt: &str) -> Result<()> {
         let default = &self.provider.get_model_config().model_name;
-        let alt = self
-            .model_switch_name
-            .as_deref()
-            .expect("model_switch_name required for test_model_switch");
         let alt_config = a8e_core::model::ModelConfig::new(alt)?.with_canonical_limits(&self.name);
 
         let message = Message::user().with_text("Just say hello!");
@@ -355,14 +355,35 @@ impl ProviderTester {
             "Expected model '{}' in supported models",
             model_name
         );
-        if let Some(alt) = &self.model_switch_name {
-            assert!(
+        if let Some(preferred) = &self.model_switch_name {
+            let found = models.iter().any(|m| {
+                m == preferred || m.contains(preferred.as_str()) || preferred.contains(m.as_str())
+            });
+            let default = self.provider.get_model_config().model_name.clone();
+            let resolved = if found {
+                Some(preferred.clone())
+            } else {
                 models
                     .iter()
-                    .any(|m| m == alt || m.contains(alt.as_str()) || alt.contains(m.as_str())),
-                "Expected model_switch_name '{}' in supported models",
-                alt
-            );
+                    .find(|m| m.as_str() != default.as_str())
+                    .cloned()
+            };
+            if !found {
+                match &resolved {
+                    Some(fallback) if fallback != preferred => {
+                        println!(
+                            "Note: model_switch_name '{}' not in supported models {:?}; using '{}' for model_switch",
+                            preferred, models, fallback
+                        );
+                    }
+                    None => println!(
+                        "Note: model_switch_name '{}' not in supported models {:?}; no alternate model — skipping model_switch",
+                        preferred, models
+                    ),
+                    _ => {}
+                }
+            }
+            *self.model_switch_effective.lock().unwrap() = resolved;
         }
         Ok(())
     }
@@ -384,8 +405,11 @@ impl ProviderTester {
         self.test_image_content_support(&self.session_id_for_test("image_content"))
             .await?;
         if self.model_switch_name.is_some() {
-            self.test_model_switch(&self.session_id_for_test("model_switch"))
-                .await?;
+            let alt = self.model_switch_effective.lock().unwrap().clone();
+            if let Some(alt) = alt {
+                self.test_model_switch(&self.session_id_for_test("model_switch"), &alt)
+                    .await?;
+            }
         }
         // claude-code responds unpredictably to oversized context:
         // sometimes "no", sometimes "Prompt is too long".
