@@ -8,6 +8,7 @@ mod output;
 pub mod streaming_buffer;
 mod task_execution_display;
 mod thinking;
+pub mod tui;
 
 use crate::session::task_execution_display::{
     format_task_execution_notification, TASK_EXECUTION_NOTIFICATION_TYPE,
@@ -1547,6 +1548,15 @@ impl CliSession {
             InputResult::Recipe(filepath_opt) => self.handle_recipe(filepath_opt).await,
             InputResult::Compact => self.handle_compact().await?,
             InputResult::Status => self.handle_status().await?,
+            InputResult::Usage => {
+                crate::commands::usage::handle_usage_inline().await?;
+            }
+            InputResult::Login => {
+                crate::commands::login::handle_login().await?;
+            }
+            InputResult::Logout => {
+                crate::commands::login::handle_logout().await?;
+            }
             InputResult::Model => self.handle_model_info().await?,
             InputResult::SwitchModel(model_name) => self.handle_switch_model(&model_name).await?,
             InputResult::Exit | InputResult::Retry => {}
@@ -1946,17 +1956,35 @@ fn handle_agent_error(e: &anyhow::Error, is_stream_json_mode: bool) {
         });
     }
 
-    let is_context_exceeded = e
-        .downcast_ref::<a8e_core::providers::errors::ProviderError>()
-        .map(|provider_error| {
+    let provider_error = e.downcast_ref::<a8e_core::providers::errors::ProviderError>();
+
+    let is_context_exceeded = provider_error
+        .map(|pe| {
             matches!(
-                provider_error,
+                pe,
                 a8e_core::providers::errors::ProviderError::ContextLengthExceeded(_)
             )
         })
         .unwrap_or(false);
 
-    if is_context_exceeded {
+    let is_credits_exhausted = provider_error
+        .map(|pe| {
+            matches!(
+                pe,
+                a8e_core::providers::errors::ProviderError::CreditsExhausted(_)
+            )
+        })
+        .unwrap_or(false);
+
+    if is_credits_exhausted {
+        if !is_stream_json_mode {
+            output::render_error(&format!(
+                "{}\n\n  \u{1f4b3} Visit {} to upgrade your subscription or add credits.\n  \u{1f4ac} Use /usage to check your current balance.",
+                error_msg,
+                console::style("https://one.paean.ai").cyan().underlined(),
+            ));
+        }
+    } else if is_context_exceeded {
         warn!("Compaction requested. Should have happened in the agent!");
         if !is_stream_json_mode {
             output::render_error("Context length exceeded — automatic compaction failed.");

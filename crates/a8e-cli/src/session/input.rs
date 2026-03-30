@@ -28,6 +28,9 @@ pub enum InputResult {
     Status,
     Model,
     SwitchModel(String),
+    Usage,
+    Login,
+    Logout,
 }
 
 #[derive(Debug)]
@@ -245,6 +248,10 @@ fn handle_slash_command(input: &str) -> Option<InputResult> {
     const CMD_SUMMARIZE_DEPRECATED: &str = "/summarize";
     const CMD_STATUS: &str = "/status";
     const CMD_MODEL: &str = "/model";
+    const CMD_USAGE: &str = "/usage";
+    const CMD_CREDITS: &str = "/credits";
+    const CMD_LOGIN: &str = "/login";
+    const CMD_LOGOUT: &str = "/logout";
 
     match input {
         "/exit" | "/quit" => Some(InputResult::Exit),
@@ -322,6 +329,9 @@ fn handle_slash_command(input: &str) -> Option<InputResult> {
         }
         "/r" => Some(InputResult::ToggleFullToolOutput),
         s if s == CMD_STATUS => Some(InputResult::Status),
+        s if s == CMD_USAGE || s == CMD_CREDITS => Some(InputResult::Usage),
+        s if s == CMD_LOGIN => Some(InputResult::Login),
+        s if s == CMD_LOGOUT => Some(InputResult::Logout),
         s if s == CMD_MODEL => Some(InputResult::Model),
         s if s.starts_with("/model ") => {
             let model_name = s.strip_prefix("/model ").unwrap_or("").trim();
@@ -475,6 +485,12 @@ fn print_help() {
             "/builtin <names>",
             "Add builtin extensions (comma-separated)",
         ),
+        (
+            "/usage, /credits",
+            "Show credits balance & subscription status",
+        ),
+        ("/login", "Login to Paean AI via browser"),
+        ("/logout", "Log out of Paean AI"),
         ("/t [theme]", "Toggle or set theme: light, dark, ansi"),
         ("/r", "Toggle full tool output (no truncation)"),
         ("/exit, /quit", "Exit the session"),

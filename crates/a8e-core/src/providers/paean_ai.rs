@@ -52,7 +52,22 @@ fn lookup_known_model_limit(model_name: &str) -> Option<usize> {
         .map(|(_, limit)| *limit)
 }
 
+pub const PAEAN_JWT_TOKEN_KEY: &str = "PAEAN_JWT_TOKEN";
+
 impl PaeanAiProvider {
+    /// Resolve authentication: prefer explicit API key, fall back to stored JWT token
+    fn resolve_auth(config: &crate::config::Config) -> Result<String> {
+        if let Ok(api_key) = config.get_secret::<String>("PAEAN_AI_API_KEY") {
+            return Ok(api_key);
+        }
+        if let Ok(jwt) = config.get_secret::<String>(PAEAN_JWT_TOKEN_KEY) {
+            return Ok(jwt);
+        }
+        Err(anyhow::anyhow!(
+            "No Paean AI credentials found. Either set PAEAN_AI_API_KEY or run `a8e login` to authenticate."
+        ))
+    }
+
     pub async fn from_env(model: ModelConfig) -> Result<Self> {
         let known_limit = lookup_known_model_limit(&model.model_name);
         let model = if model.context_limit.is_none() {
@@ -63,12 +78,12 @@ impl PaeanAiProvider {
         let model = model.with_fast(PAEAN_AI_DEFAULT_FAST_MODEL, PAEAN_AI_PROVIDER_NAME)?;
 
         let config = crate::config::Config::global();
-        let api_key: String = config.get_secret("PAEAN_AI_API_KEY")?;
+        let token = Self::resolve_auth(config)?;
         let host: String = config
             .get_param("PAEAN_AI_HOST")
             .unwrap_or_else(|_| "https://api.paean.ai".to_string());
 
-        let auth = AuthMethod::BearerToken(api_key);
+        let auth = AuthMethod::BearerToken(token);
         let api_client = ApiClient::new(host, auth)?;
 
         Ok(Self {
@@ -96,7 +111,7 @@ impl ProviderDef for PaeanAiProvider {
             models,
             PAEAN_AI_DOC_URL,
             vec![
-                ConfigKey::new("PAEAN_AI_API_KEY", true, true, None, true),
+                ConfigKey::new("PAEAN_AI_API_KEY", false, true, None, true),
                 ConfigKey::new(
                     "PAEAN_AI_HOST",
                     false,

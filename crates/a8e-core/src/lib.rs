@@ -13,6 +13,7 @@ pub mod mcp_utils;
 pub mod model;
 pub mod oauth;
 pub mod otel;
+pub mod paean_api;
 pub mod permission;
 pub mod posthog;
 pub mod prompt_template;

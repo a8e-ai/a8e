@@ -940,6 +940,22 @@ enum Command {
         command: WechatCommand,
     },
 
+    /// Login to Paean AI via browser
+    #[command(about = "Authenticate with Paean AI via browser")]
+    Login {
+        /// Check authentication status without logging in
+        #[arg(long, help = "Check current authentication status")]
+        check: bool,
+    },
+
+    /// Log out of Paean AI
+    #[command(about = "Clear stored Paean AI credentials")]
+    Logout {},
+
+    /// Show credits balance and subscription status
+    #[command(about = "Show Paean AI credits & subscription status")]
+    Usage {},
+
     /// Update the a8e CLI version
     #[command(about = "Update the a8e CLI version")]
     Update {
@@ -1117,6 +1133,9 @@ fn get_command_name(command: &Option<Command>) -> &'static str {
         Some(Command::Schedule { .. }) => "schedule",
         Some(Command::Gateway { .. }) => "gateway",
         Some(Command::Wechat { .. }) => "wechat",
+        Some(Command::Login { .. }) => "login",
+        Some(Command::Logout {}) => "logout",
+        Some(Command::Usage {}) => "usage",
         Some(Command::Update { .. }) => "update",
         Some(Command::Recipe { .. }) => "recipe",
         Some(Command::Web { .. }) => "web",
@@ -1695,6 +1714,15 @@ pub async fn cli() -> anyhow::Result<()> {
             }
             WechatCommand::Contacts => crate::commands::wechat::handle_wechat_contacts().await,
         },
+        Some(Command::Login { check }) => {
+            if check {
+                crate::commands::login::handle_login_check().await
+            } else {
+                crate::commands::login::handle_login().await
+            }
+        }
+        Some(Command::Logout {}) => crate::commands::login::handle_logout().await,
+        Some(Command::Usage {}) => crate::commands::usage::handle_usage().await,
         Some(Command::Update {
             canary,
             reconfigure,

@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-version = "0.2.11"
+version = "0.2.12"
 authors = ["a8e-ai <dev@a8e.ai>"]
 license = "Apache-2.0"
 repository = "https://github.com/a8e-ai/a8e"
@@ -68,3 +68,5 @@ opentelemetry-otlp = "0.31"
 opentelemetry-appender-tracing = "0.31"
 opentelemetry-stdout = { version = "0.31", features = ["trace", "metrics", "logs"] }
 tracing-opentelemetry = "0.32"
+ratatui = "0.30"
+crossterm = "0.29"

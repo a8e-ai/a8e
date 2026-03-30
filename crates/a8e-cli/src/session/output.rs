@@ -1326,6 +1326,11 @@ pub fn set_terminal_title() {
 pub fn display_greeting() {
     set_terminal_title();
 
+    let version = env!("CARGO_PKG_VERSION");
+    if super::tui::render_greeting(version).is_ok() {
+        return;
+    }
+
     let logo = [
         r"      ___      ",
         r" __ _( _ ) ___ ",
@@ -1357,22 +1362,26 @@ pub fn render_status_info(
     total_tokens: Option<i32>,
     context_limit: usize,
 ) {
+    let cwd_display = get_cwd_display();
+
+    let tui_info = super::tui::SessionStatusInfo {
+        session_id: session_id.to_string(),
+        provider: provider.to_string(),
+        model: model.to_string(),
+        mode: mode.to_string(),
+        extensions: extensions.to_vec(),
+        total_tokens,
+        context_limit,
+        cwd: cwd_display.clone(),
+    };
+
+    if super::tui::render_status_panel(&tui_info, None).is_ok() {
+        return;
+    }
+
     println!();
     println!("  {}", style("Session Status").bold().underlined());
     println!();
-
-    let cwd_display = std::env::current_dir()
-        .ok()
-        .map(|p| {
-            let path_str = p.display().to_string();
-            if let Ok(home) = etcetera::home_dir() {
-                if let Ok(stripped) = p.strip_prefix(&home) {
-                    return format!("~/{}", stripped.display());
-                }
-            }
-            path_str
-        })
-        .unwrap_or_else(|| "unknown".to_string());
 
     let rows: &[(&str, String)] = &[
         ("Session", session_id.to_string()),
@@ -1410,6 +1419,21 @@ pub fn render_status_info(
         );
     }
     println!();
+}
+
+pub fn get_cwd_display() -> String {
+    std::env::current_dir()
+        .ok()
+        .map(|p| {
+            let path_str = p.display().to_string();
+            if let Ok(home) = etcetera::home_dir() {
+                if let Ok(stripped) = p.strip_prefix(&home) {
+                    return format!("~/{}", stripped.display());
+                }
+            }
+            path_str
+        })
+        .unwrap_or_else(|| "unknown".to_string())
 }
 
 pub fn render_model_info(

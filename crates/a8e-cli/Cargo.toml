@@ -65,13 +65,18 @@ clap_complete = "4.5.62"
 comfy-table = "7.2.2"
 reqwest = { workspace = true, features = ["json"] }
 qr2term = "0.3"
+ratatui = { workspace = true, optional = true }
+crossterm = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["wincred"] }
 
 [features]
+default = ["tui"]
 # disables the update command
 disable-update = []
+# Ratatui-based TUI enhancements for status panels, greeting, credits display
+tui = ["dep:ratatui", "dep:crossterm"]
 
 [dev-dependencies]
 tempfile = { workspace = true }

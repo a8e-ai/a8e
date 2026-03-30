@@ -185,10 +185,35 @@ pub fn map_http_error_to_provider_error(
                 ProviderError::RequestFailed(format!("Bad request (400): {}", payload_str))
             }
         }
-        StatusCode::TOO_MANY_REQUESTS => ProviderError::RateLimitExceeded {
-            details: extract_message(),
-            retry_delay: None,
-        },
+        StatusCode::PAYMENT_REQUIRED => {
+            let msg = extract_message();
+            let credits_msg = if msg.is_empty() {
+                "Credits exhausted. Visit https://one.paean.ai to upgrade your subscription or add credits.".to_string()
+            } else {
+                format!(
+                    "{}. Visit https://one.paean.ai to upgrade or add credits.",
+                    msg
+                )
+            };
+            ProviderError::CreditsExhausted(credits_msg)
+        }
+        StatusCode::TOO_MANY_REQUESTS => {
+            let msg = extract_message();
+            let is_credits = msg.to_lowercase().contains("credits")
+                || msg.to_lowercase().contains("quota")
+                || msg.to_lowercase().contains("insufficient");
+            if is_credits {
+                ProviderError::CreditsExhausted(format!(
+                    "{}. Visit https://one.paean.ai to upgrade or add credits.",
+                    msg
+                ))
+            } else {
+                ProviderError::RateLimitExceeded {
+                    details: msg,
+                    retry_delay: None,
+                }
+            }
+        }
         _ if status.is_server_error() => {
             ProviderError::ServerError(format!("Server error ({}): {}", status, extract_message()))
         }
