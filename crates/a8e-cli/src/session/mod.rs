@@ -1,3 +1,4 @@
+mod ansi_markdown;
 mod builder;
 mod completion;
 mod editor;

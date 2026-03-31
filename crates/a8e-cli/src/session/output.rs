@@ -34,7 +34,7 @@ pub enum Theme {
 }
 
 impl Theme {
-    fn as_str(&self) -> String {
+    pub(crate) fn as_str(&self) -> String {
         match self {
             Theme::Light => Config::global()
                 .get_param::<String>("A8E_CLI_LIGHT_THEME")
@@ -916,14 +916,14 @@ fn print_markdown(content: &str, theme: Theme) {
     if std::io::stdout().is_terminal() {
         if let Some((before, table, after)) = extract_markdown_table(content) {
             if !before.is_empty() {
-                print_markdown_raw(&before, theme);
+                super::ansi_markdown::render_markdown(&before, theme);
             }
             print_table(&table, theme);
             if !after.is_empty() {
                 print_markdown(after, theme);
             }
         } else {
-            print_markdown_raw(content, theme);
+            super::ansi_markdown::render_markdown(content, theme);
         }
     } else {
         print!("{}", content);
