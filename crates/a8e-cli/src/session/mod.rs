@@ -1573,6 +1573,16 @@ impl CliSession {
             console::style(format!("[Loop: {}]", event.schedule)).cyan(),
             console::style("Executing scheduled prompt...").dim()
         );
+
+        if event.clear {
+            println!(
+                "  {} {}",
+                console::style("↻").cyan(),
+                console::style("Clearing context for fresh iteration...").dim()
+            );
+            self.handle_clear().await?;
+        }
+
         println!(
             "  {} {}",
             console::style("∞").magenta().bold(),

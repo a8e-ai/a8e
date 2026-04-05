@@ -79,6 +79,9 @@ pub struct LoopJobInfo {
     /// Natural-language prompt injected into the agent conversation
     pub prompt: String,
     pub cwd: Option<String>,
+    /// If true, clear conversation context before each loop iteration
+    #[serde(default)]
+    pub clear: bool,
     pub created_at: String,
     pub last_run_at: Option<String>,
     pub next_run_at: Option<String>,
@@ -108,6 +111,9 @@ pub struct LoopPromptEvent {
     pub prompt: String,
     pub cwd: Option<String>,
     pub schedule: String,
+    /// If true, the consumer should clear conversation context before processing
+    #[serde(default)]
+    pub clear: bool,
 }
 
 // Legacy aliases for backward compatibility
@@ -150,6 +156,11 @@ pub struct LoopCreateParams {
     /// Working directory context for the prompt (optional)
     #[serde(default)]
     pub cwd: Option<String>,
+    /// If true, clear conversation context before each loop iteration.
+    /// Ensures each run starts with a fresh context, avoiding interference
+    /// from accumulated history. Recommended for long-running or independent tasks.
+    #[serde(default)]
+    pub clear: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -251,11 +262,13 @@ impl LoopServer {
         let now = chrono::Utc::now();
         let cancel_token = tokio_util::sync::CancellationToken::new();
 
+        let clear = params.clear.unwrap_or(false);
         let info = LoopJobInfo {
             id: id.clone(),
             schedule: params.schedule.clone(),
             prompt: params.prompt.clone(),
             cwd: params.cwd.clone(),
+            clear,
             created_at: now.to_rfc3339(),
             last_run_at: None,
             next_run_at: None,
@@ -277,6 +290,7 @@ impl LoopServer {
             id.clone(),
             params.prompt,
             params.cwd,
+            clear,
             parsed,
             cancel_token,
             jobs,
@@ -636,6 +650,7 @@ fn spawn_job_executor(
     job_id: String,
     prompt: String,
     cwd: Option<String>,
+    clear: bool,
     schedule: ScheduleKind,
     cancel_token: tokio_util::sync::CancellationToken,
     jobs: JobRegistry,
@@ -666,7 +681,7 @@ fn spawn_job_executor(
                     };
 
                     if should_run {
-                        inject_prompt(&job_id, &prompt, cwd.as_deref(), &jobs).await;
+                        inject_prompt(&job_id, &prompt, cwd.as_deref(), clear, &jobs).await;
                     }
                 }
             }
@@ -698,7 +713,7 @@ fn spawn_job_executor(
                     };
 
                     if should_run {
-                        inject_prompt(&job_id, &prompt, cwd.as_deref(), &jobs).await;
+                        inject_prompt(&job_id, &prompt, cwd.as_deref(), clear, &jobs).await;
                     }
                 }
             }
@@ -706,7 +721,13 @@ fn spawn_job_executor(
     });
 }
 
-async fn inject_prompt(job_id: &str, prompt: &str, cwd: Option<&str>, jobs: &JobRegistry) {
+async fn inject_prompt(
+    job_id: &str,
+    prompt: &str,
+    cwd: Option<&str>,
+    clear: bool,
+    jobs: &JobRegistry,
+) {
     if is_agent_busy() {
         let mut reg = jobs.lock().await;
         if let Some(job) = reg.get_mut(job_id) {
@@ -732,6 +753,7 @@ async fn inject_prompt(job_id: &str, prompt: &str, cwd: Option<&str>, jobs: &Job
         prompt: prompt.to_string(),
         cwd: cwd.map(|s| s.to_string()),
         schedule,
+        clear,
     });
 
     let now = chrono::Utc::now().to_rfc3339();
