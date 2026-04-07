@@ -150,9 +150,18 @@ fn render_code_block(lang: &str, code: &str, theme: Theme) {
 // ── Text rendering (ANSI) ───────────────────────────────────────────────
 
 fn render_text_block(text: &str) {
-    for line in text.lines() {
+    let ends_with_newline = text.ends_with('\n');
+    let lines: Vec<&str> = text.lines().collect();
+    let last_idx = lines.len().saturating_sub(1);
+
+    for (i, line) in lines.iter().enumerate() {
         let rendered = render_line(line);
-        println!("{}", rendered);
+        if i < last_idx || ends_with_newline {
+            println!("{}", rendered);
+        } else {
+            // Last line without trailing newline: don't add one (streaming chunk)
+            print!("{}", rendered);
+        }
     }
 }
 
