@@ -1961,18 +1961,40 @@ fn add_provider() -> anyhow::Result<()> {
 
     let headers = collect_custom_headers()?;
 
-    create_custom_provider(CreateCustomProviderParams {
+    let provider_config = create_custom_provider(CreateCustomProviderParams {
         engine: provider_type.to_string(),
         display_name: display_name.clone(),
         api_url,
         api_key,
-        models,
+        models: models.clone(),
         supports_streaming: Some(supports_streaming),
         headers,
         requires_auth,
     })?;
 
-    cliclack::outro(format!("Custom provider added: {}", display_name))?;
+    let _ = cliclack::log::success(format!("Custom provider added: {}", display_name));
+
+    let switch = cliclack::confirm("Set this as your default provider?")
+        .initial_value(true)
+        .interact()?;
+
+    if switch {
+        let config = Config::global();
+        config.set_param("A8E_PROVIDER", &provider_config.name)?;
+        let default_model = provider_config
+            .models
+            .first()
+            .map(|m| m.name.clone())
+            .unwrap_or_default();
+        if !default_model.is_empty() {
+            config.set_param("A8E_MODEL", &default_model)?;
+        }
+        let _ = cliclack::log::success(format!(
+            "Default provider set to {} (model: {})",
+            display_name, default_model
+        ));
+    }
+
     Ok(())
 }
 

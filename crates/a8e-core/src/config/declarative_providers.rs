@@ -276,17 +276,28 @@ pub fn load_custom_providers(dir: &Path) -> Result<Vec<DeclarativeProviderConfig
         return Ok(Vec::new());
     }
 
-    std::fs::read_dir(dir)?
-        .filter_map(|entry| {
-            let path = entry.ok()?.path();
-            (path.extension()? == "json").then_some(path)
-        })
-        .map(|path| {
-            let content = std::fs::read_to_string(&path)?;
-            serde_json::from_str(&content)
-                .map_err(|e| anyhow::anyhow!("Failed to parse {}: {}", path.display(), e))
-        })
-        .collect()
+    let mut providers = Vec::new();
+    for entry in std::fs::read_dir(dir)? {
+        let path = match entry {
+            Ok(e) => e.path(),
+            Err(_) => continue,
+        };
+        if path.extension().and_then(|s| s.to_str()) != Some("json") {
+            continue;
+        }
+        match std::fs::read_to_string(&path) {
+            Ok(content) => match serde_json::from_str::<DeclarativeProviderConfig>(&content) {
+                Ok(config) => providers.push(config),
+                Err(e) => {
+                    tracing::warn!("Failed to parse custom provider {}: {}", path.display(), e);
+                }
+            },
+            Err(e) => {
+                tracing::warn!("Failed to read custom provider {}: {}", path.display(), e);
+            }
+        }
+    }
+    Ok(providers)
 }
 
 fn load_fixed_providers() -> Result<Vec<DeclarativeProviderConfig>> {
@@ -296,12 +307,24 @@ fn load_fixed_providers() -> Result<Vec<DeclarativeProviderConfig>> {
             continue;
         }
 
-        let content = file
-            .contents_utf8()
-            .ok_or_else(|| anyhow::anyhow!("Failed to read file as UTF-8: {:?}", file.path()))?;
+        let content = match file.contents_utf8() {
+            Some(c) => c,
+            None => {
+                tracing::warn!("Failed to read file as UTF-8: {:?}", file.path());
+                continue;
+            }
+        };
 
-        let config: DeclarativeProviderConfig = serde_json::from_str(content)?;
-        res.push(config)
+        match serde_json::from_str::<DeclarativeProviderConfig>(content) {
+            Ok(config) => res.push(config),
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to parse declarative provider {:?}: {}",
+                    file.path(),
+                    e
+                );
+            }
+        }
     }
 
     Ok(res)
