@@ -79,6 +79,12 @@ fn split_segments(content: &str) -> Vec<Segment> {
         text_buf.push_str(&format!("```{}\n{}", code_lang, code_buf));
     }
     if !text_buf.is_empty() {
+        // Preserve original trailing-newline state so that streaming chunks
+        // without a trailing newline (e.g. single characters from GLM) are
+        // rendered with `print!` instead of `println!` in render_text_block.
+        if !content.ends_with('\n') && text_buf.ends_with('\n') {
+            text_buf.pop();
+        }
         segments.push(Segment::Text(text_buf));
     }
 
