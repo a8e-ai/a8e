@@ -7,6 +7,11 @@
 //! Fenced code blocks are extracted and rendered via bat with the correct
 //! language for proper syntax highlighting.
 
+// All byte-index slicing in this module is done at positions derived from
+// ASCII characters (markdown markers, digits, newlines), so the indices are
+// always on valid UTF-8 boundaries.
+#![allow(clippy::string_slice)]
+
 use bat::WrappingMode;
 use console::style;
 use std::io::{self, Write};
@@ -270,8 +275,8 @@ fn render_header(level: usize, text: &str) -> String {
 
 fn strip_ul_marker(s: &str) -> Option<&str> {
     for prefix in &["- ", "* ", "+ "] {
-        if s.starts_with(prefix) {
-            return Some(s[prefix.len()..].trim_start());
+        if let Some(rest) = s.strip_prefix(prefix) {
+            return Some(rest.trim_start());
         }
     }
     if (s.starts_with('-') || s.starts_with('*') || s.starts_with('+'))
@@ -449,12 +454,8 @@ fn find_double_closing(chars: &[char], start: usize, marker: char) -> Option<usi
 }
 
 fn find_single_closing(chars: &[char], start: usize, marker: char) -> Option<usize> {
-    for i in start..chars.len() {
-        if chars[i] == marker && (i == start || chars[i - 1] != '\\') && i > start {
-            return Some(i);
-        }
-    }
-    None
+    (start..chars.len())
+        .find(|&i| chars[i] == marker && (i == start || chars[i - 1] != '\\') && i > start)
 }
 
 fn find_backtick_closing(chars: &[char], start: usize, tick_count: usize) -> Option<usize> {
