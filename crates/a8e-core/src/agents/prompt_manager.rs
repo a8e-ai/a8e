@@ -167,7 +167,7 @@ impl<'a> SystemPromptBuilder<'a, PromptManager> {
             prompt_template::render_template("system.md", &context)
         }
         .unwrap_or_else(|_| {
-            "You are a general-purpose AI agent called Articulate (a8e). Speak freely, code locally.".to_string()
+            "You are Arti, a general-purpose AI agent in the Articulate (a8e) CLI. Speak freely, code locally.".to_string()
         });
 
         let mut system_prompt_extras = self.manager.system_prompt_extras.clone();

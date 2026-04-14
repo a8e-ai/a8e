@@ -53,6 +53,48 @@ if ($ARCH -eq "AMD64") {
 $FILE = "a8e-$ARCH-pc-windows-msvc.zip"
 $DOWNLOAD_URL = "https://github.com/$REPO/releases/download/$RELEASE_TAG/$FILE"
 
+# --- Skip if already up-to-date ---
+# Resolve the actual version that RELEASE_TAG points to, then compare to the
+# locally installed binary. If they match, skip the download. Set $env:FORCE
+# to "true" to bypass this check and reinstall regardless.
+function Resolve-TargetVersion {
+    param([string]$Tag)
+    try {
+        if ($Tag -eq "stable") {
+            $resp = Invoke-RestMethod -Uri "https://api.github.com/repos/$REPO/releases/latest" -UseBasicParsing -ErrorAction Stop
+        } else {
+            $resp = Invoke-RestMethod -Uri "https://api.github.com/repos/$REPO/releases/tags/$Tag" -UseBasicParsing -ErrorAction Stop
+        }
+    } catch { return $null }
+    $ver = $resp.tag_name -replace '^v', ''
+    if (-not $ver -or $ver -eq "stable" -or $ver -eq "canary") {
+        if ($resp.name -match 'v?([0-9][0-9.]*[A-Za-z0-9.+-]*)') {
+            $ver = $matches[1]
+        } else {
+            $ver = $null
+        }
+    }
+    return $ver
+}
+
+$EXISTING_BIN = Join-Path $env:A8E_BIN_DIR $OUT_FILE
+if ($env:FORCE -ne "true" -and (Test-Path $EXISTING_BIN)) {
+    $TARGET_VERSION = Resolve-TargetVersion -Tag $RELEASE_TAG
+    if ($TARGET_VERSION) {
+        try {
+            $verOutput = & $EXISTING_BIN --version 2>$null | Select-Object -First 1
+            $CURRENT_VERSION = ($verOutput -split '\s+')[-1]
+        } catch { $CURRENT_VERSION = $null }
+        if ($CURRENT_VERSION -and $CURRENT_VERSION -eq $TARGET_VERSION) {
+            Write-Host "a8e is already up to date (v$CURRENT_VERSION). Set `$env:FORCE='true' to reinstall." -ForegroundColor Green
+            exit 0
+        }
+        if ($CURRENT_VERSION) {
+            Write-Host "Updating a8e: v$CURRENT_VERSION -> v$TARGET_VERSION" -ForegroundColor Green
+        }
+    }
+}
+
 Write-Host "Downloading a8e ($RELEASE_TAG): $FILE..." -ForegroundColor Green
 
 try {
@@ -88,10 +130,14 @@ if (-not (Test-Path $env:A8E_BIN_DIR)) {
 
 $SOURCE_EXE = Join-Path $EXTRACT_DIR "a8e.exe"
 $DEST_EXE = Join-Path $env:A8E_BIN_DIR $OUT_FILE
+$ALIAS_EXE = Join-Path $env:A8E_BIN_DIR "arti.exe"
 
 if (Test-Path $SOURCE_EXE) {
     if (Test-Path $DEST_EXE) { Remove-Item -Path $DEST_EXE -Force }
     Move-Item -Path $SOURCE_EXE -Destination $DEST_EXE -Force
+    if (Test-Path $ALIAS_EXE) { Remove-Item -Path $ALIAS_EXE -Force }
+    Copy-Item -Path $DEST_EXE -Destination $ALIAS_EXE -Force
+    Write-Host "Created alias: $ALIAS_EXE" -ForegroundColor Green
 } else {
     Write-Error "a8e.exe not found in extracted files"
     Remove-Item -Path $TMP_DIR -Recurse -Force -ErrorAction SilentlyContinue
@@ -132,4 +178,4 @@ if ($env:PATH -notlike "*$env:A8E_BIN_DIR*") {
 Write-Host ""
 Write-Host "a8e (Articulate) installed successfully!" -ForegroundColor Green
 Write-Host "Installed at: $DEST_EXE" -ForegroundColor Green
-Write-Host "Run 'a8e --help' to get started." -ForegroundColor Green
+Write-Host "Run 'a8e --help' (or the shorter alias 'arti --help') to get started." -ForegroundColor Green

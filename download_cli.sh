@@ -120,6 +120,40 @@ fi
 
 DOWNLOAD_URL="https://github.com/$REPO/releases/download/$RELEASE_TAG/$FILE"
 
+# --- 4b) Skip if already up-to-date ---
+# Resolve the actual version that RELEASE_TAG points to, then compare to the
+# locally installed binary. If they match, skip the download. Set FORCE=true
+# to bypass this check and reinstall regardless.
+resolve_target_version() {
+  local tag="$1" resp ver
+  if [ "$tag" = "stable" ]; then
+    resp=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null) || return 1
+  else
+    resp=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/tags/$tag" 2>/dev/null) || return 1
+  fi
+  ver=$(printf '%s' "$resp" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v?([^"]+)".*/\1/')
+  if [ -z "$ver" ] || [ "$ver" = "stable" ] || [ "$ver" = "canary" ]; then
+    ver=$(printf '%s' "$resp" | grep -m1 '"name"' \
+      | sed -E 's/.*"name"[[:space:]]*:[[:space:]]*"[^"0-9]*v?([0-9][0-9.]*[A-Za-z0-9.+-]*)".*/\1/')
+  fi
+  printf '%s' "$ver"
+}
+
+EXISTING_BIN="$A8E_BIN_DIR/$OUT_FILE"
+if [ "${FORCE:-false}" != "true" ] && [ -x "$EXISTING_BIN" ]; then
+  TARGET_VERSION=$(resolve_target_version "$RELEASE_TAG" || true)
+  if [ -n "${TARGET_VERSION:-}" ]; then
+    CURRENT_VERSION=$("$EXISTING_BIN" --version 2>/dev/null | head -1 | awk '{print $NF}' || true)
+    if [ -n "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" = "$TARGET_VERSION" ]; then
+      echo "a8e is already up to date (v$CURRENT_VERSION). Set FORCE=true to reinstall."
+      exit 0
+    fi
+    if [ -n "$CURRENT_VERSION" ]; then
+      echo "Updating a8e: v$CURRENT_VERSION -> v$TARGET_VERSION"
+    fi
+  fi
+fi
+
 # --- 5) Download & extract ---
 echo "Downloading a8e ($RELEASE_TAG): $FILE..."
 if ! curl -sLf "$DOWNLOAD_URL" --output "$FILE"; then
@@ -187,9 +221,14 @@ if [ "$OS" = "windows" ]; then
   for dll in "$EXTRACT_DIR"/*.dll; do
     [ -f "$dll" ] && mv "$dll" "$A8E_BIN_DIR/"
   done
+  ALIAS_FILE="arti.exe"
+  cp -f "$A8E_BIN_DIR/$OUT_FILE" "$A8E_BIN_DIR/$ALIAS_FILE"
 else
   mv "$EXTRACT_DIR/a8e" "$A8E_BIN_DIR/$OUT_FILE"
+  ALIAS_FILE="arti"
+  ln -sf "$OUT_FILE" "$A8E_BIN_DIR/$ALIAS_FILE"
 fi
+echo "Created alias: $A8E_BIN_DIR/$ALIAS_FILE -> $OUT_FILE"
 
 # --- 7) Optional configure ---
 if [ "$CONFIGURE" = true ]; then
@@ -244,9 +283,12 @@ if [[ ":$PATH:" != *":$A8E_BIN_DIR:"* ]]; then
 fi
 
 echo ""
-echo "   __ _  ___ ___"
-echo "  / _\` |( _ ) _ \\   Articulate (a8e)"
-echo " | (_| |/ _ \\  __/   Speak Freely. Code Locally."
-echo "  \\__,_| (_) \\___|"
+echo '    _         _   _            _       _       '
+echo '   / \   _ __| |_(_) ___ _   _| | __ _| |_ ___ '
+echo '  / _ \ | '"'"'__| __| |/ __| | | | |/ _` | __/ _ \'
+echo ' / ___ \| |  | |_| | (__| |_| | | (_| | ||  __/'
+echo '/_/   \_\_|   \__|_|\___|\__,_|_|\__,_|\__\___|'
 echo ""
-echo "a8e installed successfully! Run 'a8e --help' to get started."
+echo "   a8e CLI · Speak Freely. Code Locally."
+echo ""
+echo "a8e installed successfully! Run 'a8e --help' (or the shorter alias 'arti --help') to get started."

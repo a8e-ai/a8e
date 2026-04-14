@@ -1633,7 +1633,7 @@ fn prompt_tool_confirmation(security_prompt: &Option<String>) -> Result<Permissi
         println!("\n{}", security_message);
         "Do you allow this tool call?".to_string()
     } else {
-        "Articulate would like to call the above tool, do you allow?".to_string()
+        "Arti would like to call the above tool, do you allow?".to_string()
     };
 
     let permission_result = if security_prompt.is_none() {

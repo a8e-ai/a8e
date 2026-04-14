@@ -240,7 +240,7 @@ impl ClientHandler for A8eClient {
         let system_prompt = params
             .system_prompt
             .as_deref()
-            .unwrap_or("You are a general-purpose AI agent called Articulate");
+            .unwrap_or("You are Arti, a general-purpose AI agent in the Articulate CLI");
 
         let model_config = provider.get_model_config();
         let (response, usage) = provider

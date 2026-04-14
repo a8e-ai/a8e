@@ -62,7 +62,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, instrument, warn};
 
 const DEFAULT_MAX_TURNS: u32 = 1000;
-const COMPACTION_THINKING_TEXT: &str = "Articulate is compacting the conversation...";
+const COMPACTION_THINKING_TEXT: &str = "Arti is compacting the conversation...";
 
 /// Context needed for the reply function
 pub struct ReplyContext {

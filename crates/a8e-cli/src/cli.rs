@@ -971,6 +971,14 @@ enum Command {
         /// Enforce to re-configure a8e during update
         #[arg(short, long, help = "Enforce to re-configure a8e during update")]
         reconfigure: bool,
+
+        /// Force re-download even if already on the target version
+        #[arg(
+            short,
+            long,
+            help = "Force re-download even if already on the target version"
+        )]
+        force: bool,
     },
 
     /// Start a web server with a chat interface
@@ -1726,8 +1734,9 @@ pub async fn cli() -> anyhow::Result<()> {
         Some(Command::Update {
             canary,
             reconfigure,
+            force,
         }) => {
-            crate::commands::update::update(canary, reconfigure)?;
+            crate::commands::update::update(canary, reconfigure, force)?;
             Ok(())
         }
         Some(Command::Recipe { command }) => handle_recipe_subcommand(command),

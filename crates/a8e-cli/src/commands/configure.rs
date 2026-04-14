@@ -1719,7 +1719,7 @@ pub async fn handle_openrouter_auth() -> anyhow::Result<()> {
                 .complete(
                     &provider_model_config,
                     "",
-                    "You are Articulate, an AI assistant.",
+                    "You are Arti, an AI assistant in the Articulate CLI.",
                     &[Message::user().with_text("Say 'Configuration test successful!'")],
                     &[],
                 )

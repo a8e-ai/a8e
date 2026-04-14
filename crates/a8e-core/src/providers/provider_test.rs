@@ -31,7 +31,7 @@ pub async fn test_provider_configuration(
         .complete(
             &provider_model_config,
             "test-session-id",
-            "You are an AI agent called Articulate. You use tools of connected extensions to solve problems.",
+            "You are Arti, an AI agent in the Articulate CLI. You use tools of connected extensions to solve problems.",
             &messages,
             &tools.into_iter().collect::<Vec<_>>(),
         )

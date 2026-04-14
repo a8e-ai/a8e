@@ -26,6 +26,7 @@ class A8e < Formula
 
   def install
     bin.install "a8e"
+    bin.install_symlink "a8e" => "arti"
   end
 
   test do

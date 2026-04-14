@@ -4,7 +4,7 @@ use std::process::Command;
 const DOWNLOAD_SCRIPT_URL: &str =
     "https://github.com/a8e-ai/a8e/releases/download/stable/download_cli.sh";
 
-pub fn update(canary: bool, reconfigure: bool) -> Result<()> {
+pub fn update(canary: bool, reconfigure: bool, force: bool) -> Result<()> {
     if cfg!(feature = "disable-update") {
         anyhow::bail!("This command is disabled");
     };
@@ -29,6 +29,7 @@ pub fn update(canary: bool, reconfigure: bool) -> Result<()> {
         .arg(shell_str)
         .env("CANARY", canary.to_string())
         .env("CONFIGURE", reconfigure.to_string())
+        .env("FORCE", force.to_string())
         .env("A8E_TERMINAL", "1")
         .env("AGENT", "a8e")
         .spawn()?;

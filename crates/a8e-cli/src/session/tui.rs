@@ -84,33 +84,39 @@ mod inner {
     }
 
     pub fn render_greeting(version: &str) -> io::Result<()> {
-        render_inline(9, |frame, area| {
+        render_inline(10, |frame, area| {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(6), Constraint::Length(2)])
+                .constraints([Constraint::Length(7), Constraint::Length(2)])
                 .split(area);
 
             let logo_lines = vec![
                 Line::from(Span::styled(
-                    "      ___      ",
+                    "    _         _   _            _       _       ",
                     Style::default()
                         .fg(BRAND_COLOR)
                         .add_modifier(Modifier::BOLD),
                 )),
                 Line::from(Span::styled(
-                    " __ _( _ ) ___ ",
+                    "   / \\   _ __| |_(_) ___ _   _| | __ _| |_ ___ ",
                     Style::default()
                         .fg(BRAND_COLOR)
                         .add_modifier(Modifier::BOLD),
                 )),
                 Line::from(Span::styled(
-                    r"/ _` / _ \/ -_)",
+                    r"  / _ \ | '__| __| |/ __| | | | |/ _` | __/ _ \",
                     Style::default()
                         .fg(BRAND_COLOR)
                         .add_modifier(Modifier::BOLD),
                 )),
                 Line::from(Span::styled(
-                    r"\__,_\___/\___|",
+                    r" / ___ \| |  | |_| | (__| |_| | | (_| | ||  __/",
+                    Style::default()
+                        .fg(BRAND_COLOR)
+                        .add_modifier(Modifier::BOLD),
+                )),
+                Line::from(Span::styled(
+                    r"/_/   \_\_|   \__|_|\___|\__,_|_|\__,_|\__\___|",
                     Style::default()
                         .fg(BRAND_COLOR)
                         .add_modifier(Modifier::BOLD),
@@ -118,12 +124,15 @@ mod inner {
                 Line::from(""),
                 Line::from(vec![
                     Span::styled(
-                        " Articulate ",
+                        " a8e ",
                         Style::default()
                             .fg(BRAND_COLOR)
                             .add_modifier(Modifier::BOLD),
                     ),
-                    Span::styled(format!("v{}", version), Style::default().fg(DIM_COLOR)),
+                    Span::styled(
+                        format!("v{} · Speak freely, code locally.", version),
+                        Style::default().fg(DIM_COLOR),
+                    ),
                 ]),
             ];
 
