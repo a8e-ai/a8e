@@ -20,12 +20,21 @@ mod inner {
     };
     use std::io::{self, stdout, IsTerminal};
 
+    // Articulate's hero glyph in the Paean Family is `∞`. The brand color
+    // (magenta) is its individual mark; cyan acts as the supporting accent
+    // shared with the rest of the family.
     const BRAND_COLOR: Color = Color::Magenta;
     const ACCENT_COLOR: Color = Color::Cyan;
     const SUCCESS_COLOR: Color = Color::Green;
     const WARNING_COLOR: Color = Color::Yellow;
     const ERROR_COLOR: Color = Color::Red;
     const DIM_COLOR: Color = Color::DarkGray;
+
+    // Paean Family sigil — the trio of sibling product glyphs, rendered
+    // dimly anywhere we want to nod to the ecosystem without competing
+    // with Articulate's hero `∞`.
+    const FAMILY_SIGIL: &str = "\u{2b2c} \u{00b7} \u{2229} \u{00b7} \u{221e}"; // ⌬ · ∩ · ∞
+    const FAMILY_TAG: &str = "Paean Family";
 
     pub struct CreditsInfo {
         pub credits: i64,
@@ -84,10 +93,15 @@ mod inner {
     }
 
     pub fn render_greeting(version: &str) -> io::Result<()> {
-        render_inline(10, |frame, area| {
+        // Reserve an extra row for the Paean Family lockup beneath the hint.
+        render_inline(11, |frame, area| {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(7), Constraint::Length(2)])
+                .constraints([
+                    Constraint::Length(7),
+                    Constraint::Length(2),
+                    Constraint::Length(1),
+                ])
                 .split(area);
 
             let logo_lines = vec![
@@ -124,13 +138,19 @@ mod inner {
                 Line::from(""),
                 Line::from(vec![
                     Span::styled(
-                        " a8e ",
+                        " \u{221e} a8e ",
                         Style::default()
                             .fg(BRAND_COLOR)
                             .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
-                        format!("v{} · Speak freely, code locally.", version),
+                        format!("v{}", version),
+                        Style::default()
+                            .fg(ACCENT_COLOR)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                    Span::styled(
+                        " \u{00b7} Speak freely, code locally.",
                         Style::default().fg(DIM_COLOR),
                     ),
                 ]),
@@ -141,7 +161,7 @@ mod inner {
 
             let hint = Line::from(vec![
                 Span::styled(
-                    " \u{221e} ",
+                    " \u{276f} ",
                     Style::default()
                         .fg(BRAND_COLOR)
                         .add_modifier(Modifier::BOLD),
@@ -151,11 +171,27 @@ mod inner {
                     Style::default().fg(DIM_COLOR),
                 ),
                 Span::styled("  \u{00b7}  ", Style::default().fg(DIM_COLOR)),
-                Span::styled("/help for commands", Style::default().fg(DIM_COLOR)),
+                Span::styled(
+                    "/help for commands",
+                    Style::default().fg(ACCENT_COLOR),
+                ),
             ]);
 
             let hint_widget = Paragraph::new(hint).block(Block::default().borders(Borders::NONE));
             frame.render_widget(hint_widget, chunks[1]);
+
+            // Paean Family lockup — sibling-product nod, dimly rendered so
+            // it acts as a watermark rather than competing with the logo.
+            let family = Line::from(vec![
+                Span::styled(
+                    format!(" {}  ", FAMILY_TAG),
+                    Style::default().fg(DIM_COLOR),
+                ),
+                Span::styled(FAMILY_SIGIL, Style::default().fg(ACCENT_COLOR)),
+            ]);
+            let family_widget =
+                Paragraph::new(family).block(Block::default().borders(Borders::NONE));
+            frame.render_widget(family_widget, chunks[2]);
         })
     }
 

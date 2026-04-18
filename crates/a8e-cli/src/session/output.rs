@@ -1331,6 +1331,8 @@ pub fn display_greeting() {
         return;
     }
 
+    // Plain-text fallback (used when the `tui` feature is disabled, when
+    // stdout is not a terminal, or when ratatui inline rendering fails).
     let logo = [
         r"    _         _   _            _       _       ",
         r"   / \   _ __| |_(_) ___ _   _| | __ _| |_ ___ ",
@@ -1345,11 +1347,19 @@ pub fn display_greeting() {
     }
     println!();
     println!(
-        "  {} {}  {}  {}",
+        "  {} {} {}  {}  {}",
         style("∞").magenta().bold(),
+        style(format!("a8e v{}", version)).bold(),
+        style("· Speak freely, code locally.").dim(),
+        style("·").dim(),
+        style("Paean Family").dim(),
+    );
+    println!(
+        "  {}  {}  {}  {}",
         style("Type a message to get started").dim(),
         style("·").dim(),
-        style("/help for commands").dim()
+        style("/help for commands").dim(),
+        style("⌬ · ∩ · ∞").dim(),
     );
     println!();
 }

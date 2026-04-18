@@ -1,7 +1,22 @@
 use rand::seq::SliceRandom;
 
-/// Extended list of playful thinking messages for a8e
+/// Extended list of playful thinking messages for a8e.
+///
+/// The list intentionally leads with Articulate-flavored variants — the
+/// infinity glyph (`∞`) is the product's hero mark in the Paean Family,
+/// so messages that lean into "loops", "horizons", "iteration", and
+/// "articulation" reinforce the brand voice when sampled.
 const THINKING_MESSAGES: &[&str] = &[
+    // Articulate / Paean voice — kept at the head; the rest of the
+    // list is preserved verbatim from earlier iterations for variety.
+    "Articulating intent",
+    "Composing the response",
+    "Tuning the chorus of tools",
+    "Walking the infinite loop",
+    "Threading the horizon",
+    "Holding the line, listening",
+    "Sharpening the next phrase",
+    "Letting the model breathe",
     "Tracing infinite loops",
     "Converging on answers",
     "Iterating possibilities",
