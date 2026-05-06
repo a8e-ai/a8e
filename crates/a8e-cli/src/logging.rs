@@ -6,7 +6,6 @@ use tracing_subscriber::{
     Registry,
 };
 
-use a8e_core::otel::otlp;
 use a8e_core::tracing::langfuse_layer;
 
 // Used to ensure we only set up tracing once
@@ -67,10 +66,6 @@ fn setup_logging_internal(name: Option<&str>, force: bool) -> Result<()> {
                 file_layer.with_filter(env_filter).boxed(),
                 // Console logging disabled for CLI - all logs go to files only
             ];
-
-            if !force {
-                layers.extend(otlp::init_otlp_layers(a8e_core::config::Config::global()));
-            }
 
             if let Some(langfuse) = langfuse_layer::create_langfuse_observer() {
                 layers.push(langfuse.with_filter(LevelFilter::DEBUG).boxed());

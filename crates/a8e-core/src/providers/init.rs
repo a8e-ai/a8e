@@ -4,7 +4,6 @@ use super::{
     anthropic::AnthropicProvider,
     azure::AzureProvider,
     base::{Provider, ProviderMetadata},
-    bedrock::BedrockProvider,
     chatgpt_codex::ChatGptCodexProvider,
     claude_code::ClaudeCodeProvider,
     codex::CodexProvider,
@@ -21,12 +20,15 @@ use super::{
     openrouter::OpenRouterProvider,
     paean_ai::PaeanAiProvider,
     provider_registry::ProviderRegistry,
-    sagemaker_tgi::SageMakerTgiProvider,
     snowflake::SnowflakeProvider,
     tetrate::TetrateProvider,
     venice::VeniceProvider,
     xai::XaiProvider,
 };
+#[cfg(feature = "bedrock")]
+use super::bedrock::BedrockProvider;
+#[cfg(feature = "sagemaker")]
+use super::sagemaker_tgi::SageMakerTgiProvider;
 use crate::config::ExtensionConfig;
 use crate::model::ModelConfig;
 use crate::providers::base::ProviderType;
@@ -47,6 +49,7 @@ async fn init_registry() -> RwLock<ProviderRegistry> {
     let mut registry = ProviderRegistry::new().with_providers(|registry| {
         registry.register::<AnthropicProvider>(true);
         registry.register::<AzureProvider>(false);
+        #[cfg(feature = "bedrock")]
         registry.register::<BedrockProvider>(false);
         registry.register::<ChatGptCodexProvider>(true);
         registry.register::<ClaudeCodeProvider>(true);
@@ -62,6 +65,7 @@ async fn init_registry() -> RwLock<ProviderRegistry> {
         registry.register::<OpenAiProvider>(true);
         registry.register::<OpenRouterProvider>(true);
         registry.register::<PaeanAiProvider>(true);
+        #[cfg(feature = "sagemaker")]
         registry.register::<SageMakerTgiProvider>(false);
         registry.register::<SnowflakeProvider>(false);
         registry.register::<TetrateProvider>(true);

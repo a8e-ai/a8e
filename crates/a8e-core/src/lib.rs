@@ -5,6 +5,7 @@ pub mod builtin_extension;
 pub mod config;
 pub mod context_mgmt;
 pub mod conversation;
+#[cfg(feature = "whisper")]
 pub mod dictation;
 pub mod execution;
 pub mod hints;
@@ -12,7 +13,6 @@ pub mod logging;
 pub mod mcp_utils;
 pub mod model;
 pub mod oauth;
-pub mod otel;
 pub mod paean_api;
 pub mod permission;
 pub mod posthog;

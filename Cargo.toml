@@ -1,5 +1,10 @@
 [workspace]
-members = ["crates/*"]
+members = [
+    "crates/a8e-cli",
+    "crates/a8e-core",
+    "crates/a8e-mcp",
+    "crates/a8e-acp",
+]
 resolver = "2"
 
 [workspace.package]
@@ -62,11 +67,16 @@ wiremock = "0.6"
 serial_test = "3.2.0"
 test-case = "3.3.1"
 url = "2.5.8"
-opentelemetry = "0.31"
-opentelemetry_sdk = { version = "0.31", features = ["metrics"] }
-opentelemetry-otlp = "0.31"
-opentelemetry-appender-tracing = "0.31"
-opentelemetry-stdout = { version = "0.31", features = ["trace", "metrics", "logs"] }
-tracing-opentelemetry = "0.32"
 ratatui = "0.30"
 crossterm = "0.29"
+
+[profile.dev]
+debug = "line-tables-only"
+opt-level = 1
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = "symbols"
+panic = "abort"

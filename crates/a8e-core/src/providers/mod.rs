@@ -4,6 +4,7 @@ pub mod auto_detect;
 pub mod azure;
 pub mod azureauth;
 pub mod base;
+#[cfg(feature = "bedrock")]
 pub mod bedrock;
 pub mod canonical;
 pub mod chatgpt_codex;
@@ -32,6 +33,7 @@ pub mod paean_ai;
 pub mod provider_registry;
 pub mod provider_test;
 mod retry;
+#[cfg(feature = "sagemaker")]
 pub mod sagemaker_tgi;
 pub mod snowflake;
 pub mod testprovider;

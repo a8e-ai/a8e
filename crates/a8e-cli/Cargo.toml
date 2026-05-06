@@ -77,6 +77,12 @@ default = ["tui"]
 disable-update = []
 # Ratatui-based TUI enhancements for status panels, greeting, credits display
 tui = ["dep:ratatui", "dep:crossterm"]
+# Cloud provider backends (not needed for daily dev)
+bedrock = ["a8e-core/bedrock"]
+sagemaker = ["a8e-core/sagemaker"]
+cloud = ["bedrock", "sagemaker"]
+# Full release build with all features
+full = ["tui", "cloud"]
 
 [dev-dependencies]
 tempfile = { workspace = true }
