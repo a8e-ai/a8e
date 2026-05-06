@@ -5,6 +5,7 @@ use a8e_core::conversation::message::{Message, MessageContent};
 use a8e_core::providers::anthropic::ANTHROPIC_DEFAULT_MODEL;
 use a8e_core::providers::azure::AZURE_DEFAULT_MODEL;
 use a8e_core::providers::base::Provider;
+#[cfg(feature = "bedrock")]
 use a8e_core::providers::bedrock::BEDROCK_DEFAULT_MODEL;
 use a8e_core::providers::claude_code::CLAUDE_CODE_DEFAULT_MODEL;
 use a8e_core::providers::codex::CODEX_DEFAULT_MODEL;
@@ -14,6 +15,7 @@ use a8e_core::providers::errors::ProviderError;
 use a8e_core::providers::google::GOOGLE_DEFAULT_MODEL;
 use a8e_core::providers::litellm::LITELLM_DEFAULT_MODEL;
 use a8e_core::providers::openai::OPEN_AI_DEFAULT_MODEL;
+#[cfg(feature = "sagemaker")]
 use a8e_core::providers::sagemaker_tgi::SAGEMAKER_TGI_DEFAULT_MODEL;
 use a8e_core::providers::snowflake::SNOWFLAKE_DEFAULT_MODEL;
 use a8e_core::providers::xai::XAI_DEFAULT_MODEL;
@@ -588,6 +590,7 @@ async fn test_azure_provider() -> Result<()> {
     .await
 }
 
+#[cfg(feature = "bedrock")]
 #[tokio::test]
 async fn test_bedrock_provider_long_term_credentials() -> Result<()> {
     test_provider(
@@ -601,6 +604,7 @@ async fn test_bedrock_provider_long_term_credentials() -> Result<()> {
     .await
 }
 
+#[cfg(feature = "bedrock")]
 #[tokio::test]
 async fn test_bedrock_provider_aws_profile_credentials() -> Result<()> {
     let env_mods =
@@ -617,6 +621,7 @@ async fn test_bedrock_provider_aws_profile_credentials() -> Result<()> {
     .await
 }
 
+#[cfg(feature = "bedrock")]
 #[tokio::test]
 async fn test_bedrock_provider_bearer_token() -> Result<()> {
     // Clear standard AWS credentials to ensure bearer token auth is used
@@ -716,6 +721,7 @@ async fn test_snowflake_provider() -> Result<()> {
     .await
 }
 
+#[cfg(feature = "sagemaker")]
 #[tokio::test]
 async fn test_sagemaker_tgi_provider() -> Result<()> {
     test_provider(
