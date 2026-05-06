@@ -6,6 +6,13 @@ yanked = "deny"
 unmaintained = "none"
 unsound = "none"
 
-# rustls-webpki 0.101.x CRL matching bug — transitive dep via AWS SDK's hyper-rustls 0.24.x.
-# Limited impact (requires compromised issuing authority). Waiting for upstream fix.
-ignore = ["RUSTSEC-2026-0049"]
+# rustls-webpki 0.101.x via AWS SDK's hyper-rustls 0.24.x — all require misissuance to exploit.
+# thin-vec UAF via tokenizers (whisper feature only, not active in default builds).
+# Waiting for upstream SDK/dep upgrades.
+ignore = [
+    "RUSTSEC-2026-0049", # rustls-webpki: CRL matching bug
+    "RUSTSEC-2026-0098", # rustls-webpki: URI name constraints ignored
+    "RUSTSEC-2026-0099", # rustls-webpki: wildcard name constraints accepted
+    "RUSTSEC-2026-0104", # rustls-webpki: reachable panic in CRL parsing
+    "RUSTSEC-2026-0103", # thin-vec: Use-After-Free in IntoIter::drop
+]
