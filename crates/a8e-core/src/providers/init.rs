@@ -1,5 +1,9 @@
 use std::sync::{Arc, RwLock};
 
+#[cfg(feature = "bedrock")]
+use super::bedrock::BedrockProvider;
+#[cfg(feature = "sagemaker")]
+use super::sagemaker_tgi::SageMakerTgiProvider;
 use super::{
     anthropic::AnthropicProvider,
     azure::AzureProvider,
@@ -25,10 +29,6 @@ use super::{
     venice::VeniceProvider,
     xai::XaiProvider,
 };
-#[cfg(feature = "bedrock")]
-use super::bedrock::BedrockProvider;
-#[cfg(feature = "sagemaker")]
-use super::sagemaker_tgi::SageMakerTgiProvider;
 use crate::config::ExtensionConfig;
 use crate::model::ModelConfig;
 use crate::providers::base::ProviderType;

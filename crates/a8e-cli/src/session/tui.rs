@@ -171,10 +171,7 @@ mod inner {
                     Style::default().fg(DIM_COLOR),
                 ),
                 Span::styled("  \u{00b7}  ", Style::default().fg(DIM_COLOR)),
-                Span::styled(
-                    "/help for commands",
-                    Style::default().fg(ACCENT_COLOR),
-                ),
+                Span::styled("/help for commands", Style::default().fg(ACCENT_COLOR)),
             ]);
 
             let hint_widget = Paragraph::new(hint).block(Block::default().borders(Borders::NONE));
@@ -183,10 +180,7 @@ mod inner {
             // Paean Family lockup — sibling-product nod, dimly rendered so
             // it acts as a watermark rather than competing with the logo.
             let family = Line::from(vec![
-                Span::styled(
-                    format!(" {}  ", FAMILY_TAG),
-                    Style::default().fg(DIM_COLOR),
-                ),
+                Span::styled(format!(" {}  ", FAMILY_TAG), Style::default().fg(DIM_COLOR)),
                 Span::styled(FAMILY_SIGIL, Style::default().fg(ACCENT_COLOR)),
             ]);
             let family_widget =
