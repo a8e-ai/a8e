@@ -4,6 +4,8 @@ members = [
     "crates/a8e-core",
     "crates/a8e-mcp",
     "crates/a8e-acp",
+    "crates/a8e-test",
+    "crates/a8e-test-support",
 ]
 resolver = "2"
 
